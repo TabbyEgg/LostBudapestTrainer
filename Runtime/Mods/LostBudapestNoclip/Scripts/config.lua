@@ -4,6 +4,7 @@ return {
     BoostMultiplier = 3,
     MaxDeltaSeconds = 0.05,
     MaxVehicles = 10,
+    PlayerVehicleSetup = true, -- selected bodies use Abel's player vehicle setup
     VehicleKeys = {Repair="F1", Next="F2", Diagnose="F3", God="F4", Drive="F5", Spawn="F9"},
     MenuKey = "INS",
     Keys = {Toggle = "F6", Slower = "F7", Faster = "F8", Return = "F10"},

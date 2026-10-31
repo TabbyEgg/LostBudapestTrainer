@@ -126,7 +126,7 @@ function Menu:frame(raw)
         rect(colors.panel,x,y,w,(608+extra)*scale)
         rect(colors.accent,x,y,4*scale,(608+extra)*scale)
         text('LOST BUDAPEST',colors.accent,x+20*scale,y+17*scale,1.15)
-        text('TRAINER  /  0.3.1',colors.text,x+20*scale,y+48*scale,.85)
+        text('TRAINER  /  0.4.0',colors.text,x+20*scale,y+48*scale,.85)
         text('Mouse or arrows + Enter',colors.muted,x+20*scale,y+75*scale,.72)
         for i,row in ipairs(rows) do
             local yy=y+top+(i-1)*rh

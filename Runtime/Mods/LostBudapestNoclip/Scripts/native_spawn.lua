@@ -4,7 +4,7 @@
 local Spawn={}
 local function valid(v)return v~=nil and v:IsValid() end
 local function id(v)return tostring(v:GetAddress())..':'..v:GetFullName() end
-function Spawn.actor(ctx,class,transform,kind)
+function Spawn.actor(ctx,class,transform,kind,profile)
     local path=class:GetFullName():match('^[^ ]+ (.+)$')
     assert(path and (path=='/Script/Engine.CameraActor' or path:match('^/Game/Autok/Abel_Car%.Abel_Car_C$') or
         path:match('^/Game/Traffic_AI_System/Cars/[%w_]+/BP_[%w_]+%.BP_[%w_]+_C$')),'Unsupported spawn class')
@@ -26,6 +26,7 @@ function Spawn.actor(ctx,class,transform,kind)
         local function attempt(flag,fn)
             if touched[flag] then local ok,err=pcall(fn);if ok then touched[flag]=nil else errors[#errors+1]=tostring(err)end end
         end
+        attempt('profile',function()profile:restore()end)
         attempt('cheats',function()pc.CheatManager=originalCheats end)
         attempt('collision',function()cdo.SpawnCollisionHandlingMethod=saved.collision end)
         attempt('ai',function()cdo.AutoPossessAI=saved.ai end)
@@ -47,6 +48,7 @@ function Spawn.actor(ctx,class,transform,kind)
             touched.player=true;cdo.AutoPossessPlayer=0
         end
         touched.pawn=true;pawn:SetActorEnableCollision(false)
+        if profile then touched.profile=true;profile:apply()end
         cheats:Summon(path)
         local matches={}
         for _,candidate in ipairs(FindAllOf(kind) or {}) do
@@ -56,6 +58,7 @@ function Spawn.actor(ctx,class,transform,kind)
         end
         assert(#matches==1,'The engine did not create one clear vehicle/camera spawn; try an open area')
         actor=matches[1]
+        if profile then profile:validate(actor)end
         local q=transform.Rotation
         local yaw=math.deg(2*math.atan(q.Z,q.W))
         actor:K2_SetActorRotation({Pitch=0,Yaw=yaw,Roll=0},true)

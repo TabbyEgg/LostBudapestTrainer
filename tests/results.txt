@@ -32,4 +32,9 @@ PASS: menu mouse and keyboard edges dispatch one action and release locks first
 PASS: menu errors restore input and messages remain read-only notifications
 PASS: native menu adapter uses named output parameters and balances input locks
 PASS: stable-loader native spawn avoids FTransform marshaling and restores all temporary state
-RESULT: 245 assertions; 0 failures.
+PASS: selected bodies are constructed on Abel player Blueprint with matching animation and wheel rig
+PASS: incompatible source rigs are refused before template edits or native spawning
+PASS: partial template changes and failed construction always restore the native setup
+PASS: runtime source rigs can supply construction-only assets without sharing mutable paint
+PASS: vehicle model routing chooses the native player template and preserves explicit legacy mode
+RESULT: 284 assertions; 0 failures.

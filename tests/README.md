@@ -54,3 +54,10 @@ remain unchanged. These checks do not execute the game's Blueprint death logic.
 Boost cases cover its off default, bounded selection, normal-car support,
 Shift/W/brake gating, forward-only acceleration, target cutoff and failure
 cleanup without changing native steering or camera.
+
+Shared player-vehicle cases verify source mesh/animation/physics/wheel matching,
+pre-construction application, exact default restoration, spawned-instance
+independence, invalid rig refusal, animation/runtime wheel mismatch cleanup,
+source-instance fallback and explicit legacy routing. No array is resized and
+no source traffic actor/default is modified. Native template copy timing remains
+a modeled Unreal boundary; the fixture does not execute the Windows game.

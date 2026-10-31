@@ -1,5 +1,6 @@
 -- All calls are made by main.lua on the game thread. No guessed memory offsets.
 local adapter=require("adapter")
+local config=require("config")
 local Engine={log=adapter.log}
 local function number(v)return type(v)=="number" and v==v and v~=math.huge and v~=-math.huge end
 local function vector(v)return v and number(v.X) and number(v.Y) and number(v.Z) end
@@ -34,7 +35,12 @@ function Engine.spawnTransform(ctx)
         Rotation={X=0,Y=0,Z=math.sin(rad/2),W=math.cos(rad/2)},Scale3D={X=1,Y=1,Z=1}}
 end
 function Engine.begin(ctx,class,transform)
-    -- Adjust if possible; otherwise decline rather than forcing an overlap.
+    -- Build compatible selected models on the real player Blueprint, not the AI Blueprint.
+    if config.PlayerVehicleSetup~=false and class:GetFullName():find("/Game/Traffic_AI_System/Cars/",1,true) then
+        local player=assert(Engine.class("/Game/Autok/Abel_Car.Abel_Car_C"),"Abel player vehicle must be loaded for this model")
+        local profile=require("player_vehicle").new(class,player)
+        return require("native_spawn").actor(ctx,player,transform,"WheeledVehicle",profile)
+    end
     return require("native_spawn").actor(ctx,class,transform,"WheeledVehicle")
 end
 function Engine.prepare(actor)
@@ -310,6 +316,8 @@ function Engine.diagnose()
     for index=1,math.min(3,#items) do
         local actor=items[index].actor
         Engine.log("NEARBY VEHICLE "..actor:GetFullName())
+        local bodyOk,body=pcall(function()return actor.Mesh.SkeletalMesh end)
+        if bodyOk and Engine.valid(body) then Engine.log("BODY "..body:GetFullName())end
         local class=actor:GetClass()
         for _=1,6 do
             if not Engine.valid(class) then break end

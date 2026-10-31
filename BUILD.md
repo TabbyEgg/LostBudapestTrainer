@@ -1,6 +1,6 @@
 # Source and validation
 
-The trainer source is the ten Lua files under
+The trainer source is the eleven Lua files under
 `Runtime/Mods/LostBudapestNoclip/Scripts/`. There is no compiled trainer logic.
 The only DLLs are unmodified files from official UE4SS 3.0.1, listed with hashes
 in `payload-manifest.json` and attributed in `THIRD-PARTY.md`.
@@ -25,7 +25,7 @@ Run `python tools/package.py` to verify the recorded source identities and
 dependency bytes, regenerate the payload manifest and create the release ZIP.
 The game EXE and research toolchains are excluded from releases.
 
-Current results: **245 Lua assertions and 55 installer assertions pass**.
+Current results: **284 Lua assertions and 55 installer assertions pass**.
 The actual runtime payload was also installed and removed in an isolated
 filesystem fixture, leaving the original game EXE unchanged. The loader proxy
 exports every DWM function imported by the supplied game EXE.
@@ -35,3 +35,12 @@ PowerShell on Linux. No Windows game, native loader injection, Windows folder
 picker or Windows PowerShell 5.1 session was executed. The initial build needs
 an in-game check; the reported assertion counts do not establish that it works
 in the actual game.
+
+Version 0.4.0 uses a temporary native vehicle template profile during synchronous
+actor construction. Model mesh/animation/physics and wheel data are installed
+before physics initialization, then the exact original template is restored.
+Cases exercise one-based UE4SS arrays without resizing, incompatible rigs,
+construction overrides, partial writes, animation/physics mismatch, source
+instance fallback, immutable paint parents and native/legacy spawn routing.
+The user confirmed the original spawned Abel vehicle setup; the new model
+profiles have simulated boundary validation only, not a live engine run here.

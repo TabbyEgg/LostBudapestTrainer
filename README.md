@@ -1,4 +1,4 @@
-# Lost Budapest Trainer 0.3.1
+# Lost Budapest Trainer 0.4.0
 
 [**Download the latest ZIP from Releases**](https://github.com/TabbyEgg/LostBudapestTrainer/releases/latest)
 
@@ -79,30 +79,35 @@ killed by a scripted event or prove protection against every custom instant kill
 F4 toggles manual protection; flight applies the guard automatically.
 
 Spawn selection: **Abel's car** (default), estate, hatchback, liftback, luxury,
-van 1 and van 2. These are actual classes recorded in the provided game log.
+van 1 and van 2. Models must already be loaded in the current level.
 Only already-loaded blueprints are used. The default cap is **10** live trainer
 spawns, configurable with `MaxVehicles` (1–50); older configs use 10 automatically.
 The menu shows the current count. A spawn only counts after its actual position
 is checked. Blocked placements try other positions ahead; all blocked attempts
-remove the failed car rather than leaving it near the player. Spawn in a clear area; the game may reject an obstructed position. Version 0.3.0
-uses Unreal's native Summon function to avoid the stable loader's nested
-FTransform serialization problem. The temporary spawn helper, class spawn
-settings and player collision state are restored immediately after each call;
-the engine builds the spawn transform itself. Failed spawns include the stage
-and traceback in the log.
+remove the failed car rather than leaving it near the player. Spawn in a clear
+area. Failed spawns report the model and reason in the menu message and log.
 
-Try the game's normal enter-vehicle interaction for Abel's car. Traffic cars
-may lack normal player-entry logic. **F5 provides separate trainer driving**:
-stand on foot within 12 metres of Abel's car or a trainer-spawned car and press
-F5. **Abel's car keeps its own Blueprint controls, ticking and camera**; the
-trainer no longer overrides its throttle, steering or radio-related Blueprint
-logic. Spawned Abel cars retain the native speedometer and radio setup.
+### Shared player vehicle setup
 
-Traffic cars use fallback controls: W forward, S reverse, A/D steering, Space
-brake. Their camera is attached to the car and follows each engine frame, rather
-than being teleported by the input timer. Traffic cars have no radio integration. Press F5 again to restore your character, collision and
-visibility. Exit placement is swept; an obstruction can stop the character
-before reaching the intended spot beside the car. Turn noclip off before entry.
+**Player vehicle setup is on by default.** Estate, hatchback, liftback, luxury
+and van selections use Abel's player-vehicle Blueprint with the selected model's
+body, animation, physics asset and wheel rig. This gives compatible models the
+same player controls, speedometer, radio and camera setup as Abel's car.
+
+This applies to new trainer spawns. Existing map traffic and the original Abel
+car are left alone. Stand on foot within 12 metres and press **F5** to enter or
+exit a spawned car. Turn noclip off before entry.
+
+A model must have a loaded animated body, matching wheel count, valid wheel
+bones and unit mesh scale. An incompatible rig, or one replaced during game
+construction, cancels the spawn with a log message. The trainer never silently
+substitutes the AI driving setup when player setup is selected.
+
+Set `PlayerVehicleSetup = false` in `config.lua` to restore legacy traffic
+spawning. Legacy traffic driving uses W/S, A/D and Space with an attached camera;
+it has no player radio or native speedometer. F5 returns to the original
+character. Exit placement is swept, so an obstruction can stop the character
+before reaching the intended spot beside the car.
 
 F1 prioritizes your occupied car, then the nearest player car/trainer spawn
 within 12 metres. It rights the vehicle and clears motion. It invokes a

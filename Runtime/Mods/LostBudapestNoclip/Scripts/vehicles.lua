@@ -2,12 +2,12 @@ local Vehicles = {}
 Vehicles.__index = Vehicles
 Vehicles.catalog = {
     {name="Abel's car",path="/Game/Autok/Abel_Car.Abel_Car_C"},
-    {name="Estate (traffic)",path="/Game/Traffic_AI_System/Cars/Estate/BP_Estate.BP_Estate_C"},
-    {name="Hatchback (traffic)",path="/Game/Traffic_AI_System/Cars/Hatch/BP_Hatch.BP_Hatch_C"},
-    {name="Liftback (traffic)",path="/Game/Traffic_AI_System/Cars/Liftback/BP_Liftback.BP_Liftback_C"},
-    {name="Luxury (traffic)",path="/Game/Traffic_AI_System/Cars/Luxury/BP_Luxury.BP_Luxury_C"},
-    {name="Van 1 (traffic)",path="/Game/Traffic_AI_System/Cars/Van/BP_Van_1.BP_Van_1_C"},
-    {name="Van 2 (traffic)",path="/Game/Traffic_AI_System/Cars/Van/BP_Van_2.BP_Van_2_C"},
+    {name="Estate",path="/Game/Traffic_AI_System/Cars/Estate/BP_Estate.BP_Estate_C"},
+    {name="Hatchback",path="/Game/Traffic_AI_System/Cars/Hatch/BP_Hatch.BP_Hatch_C"},
+    {name="Liftback",path="/Game/Traffic_AI_System/Cars/Liftback/BP_Liftback.BP_Liftback_C"},
+    {name="Luxury",path="/Game/Traffic_AI_System/Cars/Luxury/BP_Luxury.BP_Luxury_C"},
+    {name="Van 1",path="/Game/Traffic_AI_System/Cars/Van/BP_Van_1.BP_Van_1_C"},
+    {name="Van 2",path="/Game/Traffic_AI_System/Cars/Van/BP_Van_2.BP_Van_2_C"},
 }
 function Vehicles.new(api,config)
     local maximum=(config or {}).MaxVehicles or 10
@@ -83,7 +83,7 @@ function Vehicles:spawn()
         local class=assert(self.api.class(option.path),"This car blueprint is not loaded in this level; select another")
         stage="player spawn transform"
         local transform=self.api.spawnTransform(ctx)
-        stage="native engine spawn"
+        stage="native engine spawn: "..option.name
         actor=self.api.begin(ctx,class,transform)
         assert(self.api.valid(actor),"No clear spawn position; move to an open area")
         stage="configure new vehicle"
@@ -93,7 +93,7 @@ function Vehicles:spawn()
         assert(self.api.valid(finished),"The game did not finish constructing the car")
         actor=finished
         self.spawned[#self.spawned+1]=actor
-        self.api.log("Spawned "..option.name..". Use the game's normal enter-vehicle interaction. Traffic cars may not support player entry; F5 provides trainer driving.")
+        self.api.log("Spawned "..option.name..". F5 enters/exits the nearby trainer vehicle.")
     end,function(e)return debug.traceback(tostring(e),2)end)
     if not ok then
         if actor and self.api.valid(actor) then pcall(self.api.destroy,actor) end

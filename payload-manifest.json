@@ -4,12 +4,12 @@
     {
       "path": "Mods/LostBudapestNoclip/Scripts/adapter.lua",
       "size": 11202,
-      "sha256": "24eef063d50c39b5e14b2b67c9d98ff6135c1379c43af3f00c26c6b402bf6d53"
+      "sha256": "fb8cae4c034ea64b33d909d9776901cf3f7572b6abacff7a8c090fd61f0e4187"
     },
     {
       "path": "Mods/LostBudapestNoclip/Scripts/config.lua",
-      "size": 410,
-      "sha256": "b3c2987d37be39e22d99ab44e404c10e93dcf0cee282a0ac195271273e5cf31a"
+      "size": 492,
+      "sha256": "7a2e8dafd290539b1d0ba5dca20d125689d85dd32590ca256329abadefc1ea11"
     },
     {
       "path": "Mods/LostBudapestNoclip/Scripts/controller.lua",
@@ -24,7 +24,7 @@
     {
       "path": "Mods/LostBudapestNoclip/Scripts/menu.lua",
       "size": 7711,
-      "sha256": "7683c33320c0b2c2cb2144b04db35b91d3081cae971c11d524912106566d5f7e"
+      "sha256": "bce9afd162f7ff62cb2125f2238da548f3a3c4b6e2ec8a49228dcfa6b48a061a"
     },
     {
       "path": "Mods/LostBudapestNoclip/Scripts/menu_engine.lua",
@@ -33,8 +33,13 @@
     },
     {
       "path": "Mods/LostBudapestNoclip/Scripts/native_spawn.lua",
-      "size": 4710,
-      "sha256": "9812b14ae24aadb4558e75c82239f97a948458c2ef83b5ec1543e51febe4b8d6"
+      "size": 4891,
+      "sha256": "eecb54ac19c0566ef44807436cc9118980919292a184b18219175b824dafff57"
+    },
+    {
+      "path": "Mods/LostBudapestNoclip/Scripts/player_vehicle.lua",
+      "size": 8574,
+      "sha256": "14395b80f05aa7f461cee3342b2373d32f7d2415103b9d345097951e57725ecd"
     },
     {
       "path": "Mods/LostBudapestNoclip/Scripts/protection.lua",
@@ -43,13 +48,13 @@
     },
     {
       "path": "Mods/LostBudapestNoclip/Scripts/vehicle_engine.lua",
-      "size": 18602,
-      "sha256": "59f3ddba0a460b3c5909a50df7e1992084f5d4bfcf0da978a2f44d09d86a294b"
+      "size": 19224,
+      "sha256": "191016aeb6305168c23b05064f9e85b63826fabed5c65b067c80200d615969ba"
     },
     {
       "path": "Mods/LostBudapestNoclip/Scripts/vehicles.lua",
-      "size": 5963,
-      "sha256": "c5ab4dcde5dad024c2fca7c55e9d92a459f1968bf9fd408e11e325bea3384a2e"
+      "size": 5841,
+      "sha256": "d107fcda60320784b41618293566f8ddb226d7dca6f3dd49f88d692a316fa98f"
     },
     {
       "path": "UE4SS-settings.ini",

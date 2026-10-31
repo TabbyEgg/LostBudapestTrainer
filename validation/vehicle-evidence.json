@@ -1,5 +1,5 @@
 {
-  "version": "0.3.1",
+  "version": "0.4.0",
   "log_sha256": "cd98db0c89ba82dea5c3c812cf614c69c4e49af85e1f09066adc375e95275b94",
   "scope": "Only class identities are recorded; original user log and game EXE are not redistributed.",
   "player_car": "/Game/Autok/Abel_Car.Abel_Car_C",
@@ -17,7 +17,8 @@
     "https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Engine/GameFramework/AController/Possess",
     "https://github.com/UE4SS-RE/RE-UE4SS/blob/v3.0.1/UE4SS/src/LuaType/LuaUObject.cpp",
     "https://github.com/folgerwang/UnrealEngine/blob/release/Engine/Source/Runtime/Engine/Private/CheatManager.cpp",
-    "https://github.com/UE4SS-RE/RE-UE4SS/blob/v3.0.1/assets/Mods/shared/Types.lua"
+    "https://github.com/UE4SS-RE/RE-UE4SS/blob/v3.0.1/assets/Mods/shared/Types.lua",
+    "https://github.com/UE4SS-RE/RE-UE4SS/blob/v3.0.1/UE4SS/src/LuaType/LuaTArray.cpp"
   ],
   "game_runtime_tested": false,
   "normal_entry_for_traffic_verified": false,
@@ -33,5 +34,15 @@
     "Abel.Health=100 and a Blueprint Damage function exist.",
     "No God mode on/off message appears in this supplied log; actual F4 activation was not established."
   ],
-  "native_car_radio_verified": false
+  "native_car_radio_verified": true,
+  "native_car_confirmation": "User confirmed that newly spawned Abel cars have the correct settings, unlike the traffic cars.",
+  "shared_player_setup": "New compatible model spawns use Abel_Car_C with source mesh, animation, physics asset and wheel setup applied to the temporary construction template and restored afterward.",
+  "shared_profiles_game_runtime_tested": false,
+  "shared_profile_limits": [
+    "Loaded animated body required",
+    "Unit mesh scale",
+    "Matching wheel count from 2 through 8",
+    "Unique existing wheel bones",
+    "Construction must retain selected mesh/animation/physics/wheel setup"
+  ]
 }
