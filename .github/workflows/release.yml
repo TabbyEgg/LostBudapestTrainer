@@ -31,4 +31,4 @@ jobs:
             gh release create "v$VERSION" "downloads/$ZIP" --target "$GITHUB_SHA" --title "Lost Budapest Trainer $VERSION" --notes-file release-notes.md
           fi
 
-# Preserve packaged Windows command-file bytes when validating release sources.
+# Match release archive text bytes without newline conversion.
