@@ -1,6 +1,6 @@
-# Lost Budapest Noclip 0.1.2
+# Lost Budapest Noclip 0.1.3
 
-[**Download the ready-to-install trainer ZIP**](https://github.com/TabbyEgg/LostBudapestTrainer/raw/refs/heads/main/downloads/LostBudapest-Noclip-0.1.2.zip)
+[**Download the ready-to-install trainer ZIP**](https://github.com/TabbyEgg/LostBudapestTrainer/releases/latest)
 
 A removable noclip/free-flight trainer for the Windows Lost Budapest demo.
 Built for the supplied `EltuntBP-Win64-Shipping.exe`: Unreal Engine 4.27.2,
@@ -31,7 +31,7 @@ occupies the required DLL paths, it stops before changing files.
 | F7 / F8 | Lower / raise speed |
 | F10 | Return to where you enabled noclip, then turn it off |
 
-Five speed levels: 2, 6, 12, 24 and 48 metres/second. The initial speed is 6 m/s.
+Ten speed levels: 2, 6, 12, 24, 48, 72, 96, 144, 240 and 480 metres/second. The initial speed is 6 m/s.
 Use F10 to return before ending flight inside geometry. F6 turns collision back
 on wherever you are. Pausing stops flight; possession/map changes turn noclip
 off. It starts off every time the game launches.
@@ -49,7 +49,7 @@ since installation are preserved instead of being overwritten during removal.
 
 ## Status and testing
 
-Messages beginning `[Lost Budapest Noclip 0.1.2]` appear in
+Messages beginning `[Lost Budapest Noclip 0.1.3]` appear in
 `Eltunt_Budapest3\Binaries\Win64\UE4SS.log`.
 
 This is a first experimental build. The submitted executable was statically
@@ -79,7 +79,7 @@ vehicle/pawn class names and available health/controller fields; it does not
 repair or spawn anything yet. If upgrading, close the game and uninstall the
 previous trainer before installing this version.
 
-## God mode (0.1.2)
+## God mode (0.1.3)
 
 **F4** toggles player god mode. Noclip automatically disables standard Unreal
 actor damage while flying and keeps protection until you have been grounded

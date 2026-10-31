@@ -1,10 +1,9 @@
-## 0.1.2
+## 0.1.3
 
-- F4 toggles god mode through Unreal's player damage permission.
-- Noclip automatically protects against standard damage while flying and keeps a landing guard until grounded for 0.75 game seconds after flight ends.
-- Vehicle diagnostics moved from F11 to F3 because F11 conflicts with the game's window toggle.
-- Vehicle spawning and repair are not implemented yet. Stand beside an enterable car, press F3, and provide the vehicle diagnostic block from UE4SS.log to identify its actual blueprint and entry system.
+- Ten flight speeds: 2, 6, 12, 24, 48, 72, 96, 144, 240 and 480 m/s. F7/F8 cycle speeds; Shift boosts temporarily. Default remains 6 m/s.
+- F4 god mode and automatic post-flight landing protection retained.
+- F3 vehicle diagnostics; F11 is reserved for the game's window toggle.
+- Fixed diagnostics skipping further fields when an unavailable UObject returned no name.
+- Vehicle spawning/repair are not implemented in this build. Logs identify the real car classes, but entry and repair still need implementation and in-game testing.
 
-Close the game and uninstall the older trainer before installing this version. Download the ZIP asset, extract it and run Install.cmd.
-
-117 Lua checks pass. God mode still needs in-game verification; custom Blueprint health changes may bypass Unreal's standard damage permission.
+Close the game and uninstall the old trainer before installing this ZIP. God mode uses Unreal's standard damage permission; custom Blueprint health logic still needs in-game verification.

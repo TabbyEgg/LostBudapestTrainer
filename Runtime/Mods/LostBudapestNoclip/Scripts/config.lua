@@ -1,5 +1,5 @@
 return {
-    Speeds = {200, 600, 1200, 2400, 4800}, -- Unreal centimetres per second
+    Speeds = {200, 600, 1200, 2400, 4800, 7200, 9600, 14400, 24000, 48000}, -- Unreal centimetres per second
     DefaultSpeedIndex = 2,
     BoostMultiplier = 3,
     MaxDeltaSeconds = 0.05,

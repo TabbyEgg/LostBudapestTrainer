@@ -36,7 +36,7 @@ local function down(controller, name)
 end
 
 function Adapter.log(message)
-    print("[Lost Budapest Noclip 0.1.2] " .. message .. "\n")
+    print("[Lost Budapest Noclip 0.1.3] " .. message .. "\n")
 end
 
 function Adapter.reset()
@@ -183,7 +183,7 @@ function Adapter.diagnose()
                             if type(value)=="userdata" then return value:GetFullName() end
                             return tostring(value)
                         end)
-                        if textOk then Adapter.log("  " .. field .. "=" .. text) end
+                        if textOk and text ~= nil then Adapter.log("  " .. field .. "=" .. text) end
                     end
                 end
             end)
