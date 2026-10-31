@@ -8,7 +8,8 @@ case('vehicle spawning uses real catalog classes, rejects blocked spawns and cle
     a.begin=function(c,cl,t)made=made+1;return{alive=true,cls=cl}end
     a.prepare=function(v)v.ready=true end;a.finish=function(v,t)assert(v.ready);return v end
     a.destroy=function(v)deleted=deleted+1;v.alive=false end
-    local v=Vehicles.new(a)
+    local v=Vehicles.new(a,{MaxVehicles=5})
+    check(Vehicles.new(a).maximum==10,'default spawn cap raised to ten; old configurations need no edits')
     check(v.catalog[1].path=='/Game/Autok/Abel_Car.Abel_Car_C','default spawn is actual player car blueprint')
     check(v:spawn() and #v.spawned==1,'completed vehicle tracked')
     for i=1,4 do check(v:spawn(),'spawn within cap '..i)end
@@ -92,6 +93,7 @@ case('native vehicle adapter uses native spawn helper, health guard and reversib
     function vehicle:K2_SetActorLocation(pos,sweep,hit,teleport)assert(sweep and teleport);return true end
     function vehicle:IsActorTickEnabled()return self.tick end
     function vehicle:SetActorTickEnabled(value)self.tick=value end
+    function vehicle:EnableInput(controller)assert(controller==pc);self.nativeInput=true end
     function vehicle:RepairVehicle()repairCalls=repairCalls+1 end
     local mesh=object('Mesh',3)
     function mesh:SetPhysicsLinearVelocity(vel,add,bone)assert(vel.X==0 and vel.Y==0 and vel.Z==0 and add==false and bone:ToString()=='None');self.stopped=true end
@@ -117,6 +119,14 @@ case('native vehicle adapter uses native spawn helper, health guard and reversib
     local cameraClass=object('CameraClass',101)
     local camera=object('TrainerCamera',102)
     function camera:K2_DestroyActor()self.alive=false end
+    function camera:K2_AttachToActor(parent,socket,locationRule,rotationRule,scaleRule,weld)
+        assert(parent==vehicle and socket:ToString()=='None' and locationRule==0 and rotationRule==0 and scaleRule==0 and weld==false)
+        self.attached=parent;return true
+    end
+    function camera:K2_SetActorRelativeLocationAndRotation(location,rot,sweep,hit,teleport)
+        assert(location.X==-500 and location.Z==220 and rot.Pitch==-12 and rot.Yaw==0 and not sweep and teleport)
+        self.updated=true
+    end
     function camera:K2_SetActorLocationAndRotation(location,rot,sweep,hit,teleport)
         assert(type(location.X)=='number' and rot.Pitch==-12 and rot.Roll==0 and sweep==false and type(hit)=='table' and teleport==true)
         self.updated=true
@@ -160,6 +170,8 @@ case('native vehicle adapter uses native spawn helper, health guard and reversib
         check(repairCalls==1,'verified zero-argument repair event is called once')
         vehicle.Health=nil;vehicle.MaxHealth=nil;class=klass('/Game/Autok/Abel_Car.Abel_Car_C',1)
         check(e.repair(vehicle):find('damage was not changed',1,true)~=nil,'missing health repair is reported rather than claimed')
+        -- Traffic uses the fallback path; Abel's own car is tested separately.
+        class=klass('/Game/Traffic_AI_System/Cars/Hatch/BP_Hatch.BP_Hatch_C',1)
         local state=e.captureDriver(context,vehicle);e.enterDriver(state)
         check(pc.Pawn==vehicle and player.bHidden and not player.collision,'entry possesses vehicle and hides original character')
         check(not vehicle.tick and vehicle.BaseEyeHeight==120,'traffic steering suspended while driving')
@@ -167,7 +179,7 @@ case('native vehicle adapter uses native spawn helper, health guard and reversib
         check(player.CharacterMovement.MovementMode==0 and not player.tick,'hidden original character cannot fall through the world while driving')
         pc.keys.W=true;pc.keys.D=true;e.driveTick(state)
         check(movement.gear==1 and movement.throttle==1 and movement.steer==1,'forward and steering inputs reach native movement')
-        check(camera.updated,'driving camera follows the car with typed transforms')
+        check(camera.updated and camera.attached==vehicle,'fallback camera is attached to the car rather than teleported by an asynchronous timer')
         pc.keys.W=false;pc.keys.S=true;e.driveTick(state)
         check(movement.gear==-1 and movement.throttle==1,'reverse selects a reverse gear')
         pc.keys.SpaceBar=true;e.driveTick(state)
@@ -196,6 +208,19 @@ case('native vehicle adapter uses native spawn helper, health guard and reversib
         local foreign=object('GameChosenPawn',70);pc.Pawn=foreign
         check(e.exitDriver(transition) and pc.Pawn==foreign,'game-selected new pawn is never overridden during cleanup')
         pc.Pawn=player
+        class=klass('/Game/Autok/Abel_Car.Abel_Car_C',1);vehicle.tick=true;pc.viewTarget=player
+        local native=e.captureDriver(context,vehicle);e.enterDriver(native)
+        check(native.native and vehicle.nativeInput and vehicle.tick and pc.viewTarget==vehicle and not native.camera,'Abel car preserves Blueprint ticking, input and native camera without a fallback camera')
+        check(movement.brake==0 and movement.handbrake==false,'native entry releases the parking brake left by the previous exit')
+        local throttle,steer=movement.throttle,movement.steer
+        pc.keys.W=true;pc.keys.S=false;pc.keys.D=true;e.driveTick(native)
+        check(movement.throttle==throttle and movement.steer==steer,'native car input is never overwritten by manual trainer steering/throttle')
+        package.loaded.adapter.menuOpen=true;e.driveTick(native)
+        check(movement.handbrake and movement.brake==1,'open menu safely brakes the native car')
+        package.loaded.adapter.menuOpen=false;e.driveTick(native)
+        check(not movement.handbrake and movement.brake==0,'closing the menu releases its native-car parking brake')
+        check(e.exitDriver(native) and pc.Pawn==player and pc.viewTarget==player,'native exit restores the original character and view')
+        class=klass('/Game/Traffic_AI_System/Cars/Hatch/BP_Hatch.BP_Hatch_C',1)
         local destroyed=e.captureDriver(context,vehicle);e.enterDriver(destroyed);vehicle.alive=false;pc.Pawn=nil
         check(e.exitDriver(destroyed) and pc.Pawn==player,'destroyed car with no pawn recovers original character')
 

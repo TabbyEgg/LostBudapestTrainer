@@ -1,5 +1,5 @@
 {
-  "version": "0.3.0",
+  "version": "0.3.1",
   "log_sha256": "cd98db0c89ba82dea5c3c812cf614c69c4e49af85e1f09066adc375e95275b94",
   "scope": "Only class identities are recorded; original user log and game EXE are not redistributed.",
   "player_car": "/Game/Autok/Abel_Car.Abel_Car_C",
@@ -16,12 +16,22 @@
     "https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Engine/Kismet/UGameplayStatics/BeginDeferredActorSpawnFromClass",
     "https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Engine/GameFramework/AController/Possess",
     "https://github.com/UE4SS-RE/RE-UE4SS/blob/v3.0.1/UE4SS/src/LuaType/LuaUObject.cpp",
-    "https://github.com/folgerwang/UnrealEngine/blob/release/Engine/Source/Runtime/Engine/Private/CheatManager.cpp"
+    "https://github.com/folgerwang/UnrealEngine/blob/release/Engine/Source/Runtime/Engine/Private/CheatManager.cpp",
+    "https://github.com/UE4SS-RE/RE-UE4SS/blob/v3.0.1/assets/Mods/shared/Types.lua"
   ],
   "game_runtime_tested": false,
   "normal_entry_for_traffic_verified": false,
   "repair_limit": "Only verified zero-input repair functions or recognized health/max-health numeric pairs; otherwise recovery only.",
   "spawn_failure_log_sha256": "5955aa25b0da4d0a610372304635a723c07dbe69f10ebb05111fd9a77117fa1f",
   "reported_failure": "0.2.0 vehicle spawn native calls returned only a function-address error; no successful spawn was logged.",
-  "spawn_change": "Use native UCheatManager.Summon with temporary helper and reversible class defaults; avoid nested FTransform argument serialization in stable UE4SS."
+  "spawn_change": "Use native UCheatManager.Summon with temporary helper and reversible class defaults; avoid nested FTransform argument serialization in stable UE4SS.",
+  "runtime_log_031_fix_sha256": "a97077fb4f04a1cd98d485c2514f2988b4585e338635c1394ac856224cd0c52a",
+  "runtime_observations": [
+    "Menu key unavailable at startup; pinned stable Types.lua names Insert INS, not INSERT.",
+    "Five successful spawns followed by the five-car cap.",
+    "HUD_Shooter Blueprint HUD exists.",
+    "Abel.Health=100 and a Blueprint Damage function exist.",
+    "No God mode on/off message appears in this supplied log; actual F4 activation was not established."
+  ],
+  "native_car_radio_verified": false
 }

@@ -23,7 +23,8 @@ case('stable-loader native spawn avoids FTransform marshaling and restores all t
         function created:GetClass()return class end
         function created:K2_SetActorRotation(rot,teleport)assert(rot.Roll==0 and rot.Pitch==0 and teleport)end
         function created:SetActorScale3D(scale)assert(scale.X==1 and scale.Y==1 and scale.Z==1)end
-        function created:K2_SetActorLocation(location,sweep,hit,teleport)assert(location.X==700 and sweep and teleport and type(hit)=='table');self.placed=true;return true end
+        function created:K2_SetActorLocation(location,sweep,hit,teleport)assert(location.X==700 and sweep and teleport and type(hit)=='table');self.placed=true;self.position=location;return true end
+        function created:K2_GetActorLocation()return self.position or {X=0,Y=0,Z=0}end
         function created:K2_DestroyActor()self.alive=false end
         actors[#actors+1]=created
     end
@@ -39,6 +40,20 @@ case('stable-loader native spawn avoids FTransform marshaling and restores all t
         check(cdo.AutoPossessAI==2 and cdo.AutoPossessPlayer==1 and cdo.SpawnCollisionHandlingMethod==0,'all shared class defaults restored after successful spawn')
         local first=created;spawn.actor(ctx,class,transform,'WheeledVehicle')
         check(created~=first and first.alive,'a later spawn never mistakes an existing car for its result')
+        local summon=helper.Summon
+        helper.Summon=function(self,path)
+            summon(self,path)
+            created.K2_SetActorLocation=function(self,location)
+                self.position=location.X==700 and {X=50,Y=0,Z=0} or location
+                return location.X~=700
+            end
+        end
+        local spread={Translation=transform.Translation,Rotation=transform.Rotation,Candidates={{X=700,Y=0,Z=90},{X=1100,Y=0,Z=90}}}
+        local recovered=spawn.actor(ctx,class,spread,'WheeledVehicle')
+        check(recovered.position.X==1100,'blocked initial placement tries a clear alternative instead of counting a car stuck near the player')
+        helper.Summon=function(self,path)summon(self,path);created.K2_SetActorLocation=function(self)self.position={X=0,Y=0,Z=0};return false end end
+        check(not pcall(spawn.actor,ctx,class,spread,'WheeledVehicle') and not created.alive,'all blocked placements remove the failed spawn and never consume a visible-car slot')
+        helper.Summon=summon
         fail=true;check(not pcall(spawn.actor,ctx,class,transform,'WheeledVehicle'),'native engine spawn failure is reported')
         check(pc.CheatManager==previousCheats and pawn.collision and cdo.AutoPossessAI==2 and cdo.AutoPossessPlayer==1 and cdo.SpawnCollisionHandlingMethod==0,'engine exception restores the exact original manager, collision and class defaults')
         fail=false;local move=helper.Summon

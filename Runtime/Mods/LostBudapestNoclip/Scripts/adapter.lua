@@ -36,7 +36,7 @@ local function down(controller, name)
 end
 
 function Adapter.log(message)
-    print("[Lost Budapest Trainer 0.3.0] " .. message .. "\n")
+    print("[Lost Budapest Trainer 0.3.1] " .. message .. "\n")
     if Adapter.onLog then pcall(Adapter.onLog,message) end
 end
 
@@ -58,6 +58,13 @@ function Adapter.playerContext()
 end
 
 function Adapter.gameplay() return statics() end
+function Adapter.keyDown(name)
+    local ok,value=pcall(function()
+        local ctx=Adapter.playerContext()
+        return ctx and down(ctx.controller,name) or false
+    end)
+    return ok and value or false
+end
 
 function Adapter.resolve()
     local player=Adapter.playerContext()
@@ -159,9 +166,40 @@ end
 function Adapter.captureDamage(ctx)
     local ok, value = pcall(function() return ctx.pawn.bCanBeDamaged end)
     if not ok or type(value) ~= "boolean" then return nil end
-    return {ctx=ctx,identity=ctx.identity,pawnIdentity=identity(ctx.pawn),damage=value}
+    local saved={ctx=ctx,identity=ctx.identity,pawnIdentity=identity(ctx.pawn),damage=value}
+    pcall(function()
+        -- The supplied runtime log establishes Abel.Health and his custom Damage function.
+        if ctx.pawn:GetClass():GetFullName()=="BlueprintGeneratedClass /Game/Characters/Blueprints/Abel/Abel.Abel_C" then
+            local health=ctx.pawn.Health
+            if type(health)=="number" and health==health and health>0 and health<1000000 then saved.health=health end
+        end
+    end)
+    return saved
 end
 function Adapter.disableDamage(ctx) ctx.pawn.bCanBeDamaged=false end
+function Adapter.guardHealthAndFall(ctx,saved)
+    if ctx.identity~=saved.identity then return end
+    if saved.health then
+        local health=ctx.pawn.Health
+        -- Preserve a living player's health; never pretend to resurrect a scripted death.
+        if type(health)=="number" and health>0 and health<saved.health then ctx.pawn.Health=saved.health end
+    end
+    if valid(ctx.movement) and ctx.movement.MovementMode==3 then
+        local v=ctx.movement.Velocity
+        if v and type(v.Z)=="number" and v.Z < -300 then
+            ctx.movement.Velocity={X=v.X,Y=v.Y,Z=-300}
+        end
+    end
+end
+function Adapter.blockIncomingDamage(targetParam,amountParam)
+    local target=targetParam:get()
+    local ctx=Adapter.damageContext()
+    if not ctx or not valid(target) or identity(target)~=ctx.identity then return false end
+    local amount=amountParam:get()
+    if type(amount)~="number" or amount<=0 then return false end
+    amountParam:set(0) -- Native pre-hook: ApplyDamage exits before calling TakeDamage.
+    return true
+end
 function Adapter.restoreDamage(saved)
     local pawn=saved.ctx.pawn
     if valid(pawn) and identity(pawn)==saved.pawnIdentity and pawn.bCanBeDamaged==false then
@@ -207,6 +245,13 @@ function Adapter.diagnose()
                 end
             end)
             if not ok then Adapter.log("Skipped unavailable object: " .. tostring(err)) end
+        end
+    end
+    if ctx then
+        Adapter.log("PLAYER "..ctx.pawn:GetFullName())
+        for _,field in ipairs({"Health","bCanBeDamaged"}) do
+            local ok,value=pcall(function()return ctx.pawn[field]end)
+            if ok and (type(value)=="number" or type(value)=="boolean") then Adapter.log("PLAYER "..field.."="..tostring(value))end
         end
     end
     for _,hud in ipairs(FindAllOf("HUD") or {}) do

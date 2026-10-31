@@ -10,6 +10,10 @@ PASS: failed emergency return keeps noclip active until a successful retry
 PASS: failed restoration stays recoverable and cannot stack a second activation
 PASS: external engine ownership changes stop flight
 PASS: new vehicle keys are queued and failed diagnostics cannot drop active flight
+PASS: native pre-damage guard suppresses protected-player damage before health processing
+PASS: held hotkeys cannot repeatedly toggle god mode
+PASS: saved INSERT spelling remains compatible with the actual INS enum
+PASS: player custom health and lethal falling speed are guarded without resurrecting dead pawns
 PASS: shipped UE4SS adapter and bindings use typed game-thread calls
 PASS: main scheduler recovers from queue failure and player restarts
 PASS: adapter rejects unknown input names and preserves later engine movement
@@ -27,4 +31,4 @@ PASS: menu mouse and keyboard edges dispatch one action and release locks first
 PASS: menu errors restore input and messages remain read-only notifications
 PASS: native menu adapter uses named output parameters and balances input locks
 PASS: stable-loader native spawn avoids FTransform marshaling and restores all temporary state
-RESULT: 211 assertions; 0 failures.
+RESULT: 233 assertions; 0 failures.

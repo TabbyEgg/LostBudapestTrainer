@@ -41,3 +41,12 @@ actor, and verify helper/class defaults/collision restoration on every modeled
 failure. The replacement spawn path passes only flat vectors/rotators into
 Unreal, never nested FTransform tables. These are simulated boundary tests, not
 a live UE4SS/game validation.
+
+0.3.1 regressions use the stable loader's real `INS` key spelling and test the
+preserved `INSERT` alias, held-key deduplication, obstructed spawn positions,
+Abel native input/camera without manual control writes, attached traffic camera,
+menu braking cleanup, custom Health preservation and vertical fall limits.
+
+Native damage hook cases verify player-only pre-damage suppression for lethal
+ApplyDamage and ApplyPointDamage while other actors and unprotected damage
+remain unchanged. These checks do not execute the game's Blueprint death logic.

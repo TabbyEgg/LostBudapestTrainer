@@ -45,11 +45,11 @@ function Menu:rows()
     local s=self.status()
     return {
         {label='Noclip',value=s.flying and 'ON' or 'OFF',action='toggle'},
-        {label='God mode',value=s.god and 'ON' or (s.protected and 'LANDING GUARD' or 'OFF'),action='godmode',stay=true},
+        {label='God mode',value=s.god and 'ON' or (s.protected and 'AUTO GUARD' or 'OFF'),action='godmode',stay=true},
         {label='Flight speed',value=string.format('<  %g m/s  >',s.speed/100),action='faster',left='slower',right='faster',stay=true},
         {label='Return to flight start',value='F10',action='return'},
         {label='Vehicle model',value='<  '..s.model..'  >',action='cycleVehicle',left='previousVehicle',right='cycleVehicle',stay=true},
-        {label='Spawn selected vehicle',value='F9',action='spawnVehicle'},
+        {label='Spawn selected vehicle',value=string.format('%d/%d   F9',s.spawned or 0,s.maximum or 10),action='spawnVehicle'},
         {label=s.driving and 'Exit trainer driving' or 'Enter nearby vehicle',value='F5',action='drive'},
         {label='Recover / repair vehicle',value='F1',action='repair'},
         {label='Write vehicle diagnostics',value='F3',action='diagnose'},
@@ -124,7 +124,7 @@ function Menu:frame(raw)
         rect(colors.panel,x,y,w,608*scale)
         rect(colors.accent,x,y,4*scale,608*scale)
         text('LOST BUDAPEST',colors.accent,x+20*scale,y+17*scale,1.15)
-        text('TRAINER  /  0.3.0',colors.text,x+20*scale,y+48*scale,.85)
+        text('TRAINER  /  0.3.1',colors.text,x+20*scale,y+48*scale,.85)
         text('Mouse or arrows + Enter',colors.muted,x+20*scale,y+75*scale,.72)
         for i,row in ipairs(rows) do
             local yy=y+top+(i-1)*rh

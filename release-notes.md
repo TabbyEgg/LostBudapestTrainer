@@ -1,9 +1,11 @@
-## 0.3.0 — trainer menu and revised vehicle spawning
+## 0.3.1 — menu binding, vehicle controls and protection fixes
 
-- **Insert** opens a mouse/keyboard trainer menu: noclip, god mode, flight speed, return, vehicle model, spawn, enter/exit, recovery/repair and diagnostics.
-- Live status and recent trainer messages are visible on the HUD. Up/Down selects, Left/Right adjusts, Enter activates, Backspace closes.
-- Vehicle and camera spawning now use Unreal's native Summon function, avoiding UE4SS 3.0.1's nested FTransform serializer. Temporary helper/settings are restored on success and failure. This addresses the native spawn failure reported with 0.2.0 but still needs an in-game retest.
-- Spawn failures include the failing stage and traceback. Original function-address-only errors are no longer the sole diagnostic.
-- Existing hotkeys and Update.cmd remain available. The menu releases its input locks on close, player changes and rendering failure; missing HUD callbacks never lock input.
+- Fixed **Insert**: UE4SS 3.0.1 calls the key `INS`, so 0.3.0 never registered it. Preserved `INSERT` configurations now work too.
+- Held hotkeys no longer repeatedly toggle protection or consume multiple vehicle slots until released.
+- Default vehicle cap increased to **10**, configurable with `MaxVehicles`. Actual spawn positions are checked and blocked placements try alternatives ahead. Failed placements are removed and never counted.
+- Abel's car now retains its own Blueprint input, ticking and camera. The trainer no longer imposes generic throttle/steering or a separate fixed camera on it. Radio behaviour needs an in-game check; traffic radio is not implemented.
+- Traffic fallback camera is attached to the vehicle rather than updated by an asynchronous timer. Entry and menu close release the parking brake correctly.
+- God/flight protection zeroes native damage before TakeDamage for the protected player, rather than healing standard damage afterward. It also preserves living Abel's custom Health and caps dangerous falling velocity to 3 m/s; landing protection remains until grounded. It does not revive scripted deaths or establish protection against all instant-kill scripts.
+- F3 reports player Health/damage permission and vehicle radio/camera/input function names. It no longer uses parameter enumeration unavailable on this stable loader's UFunction wrapper.
 
-Fully quit the game, run **Update.cmd**, then launch and press **Insert**. New menu drawing and revised spawning are experimental until verified in-game. Repair remains physical recovery when the vehicle exposes no verified health repair.
+Close the game and run **Update.cmd**. Press **Insert** for the menu; enable **God mode** there or with **F4**. Changes pass automated boundary tests but still need a live game test.

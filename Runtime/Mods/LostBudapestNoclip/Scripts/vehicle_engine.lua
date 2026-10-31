@@ -23,7 +23,14 @@ function Engine.spawnTransform(ctx)
     assert(vector(position) and number(yaw),"Invalid player transform")
     yaw=yaw%360
     local rad=math.rad(yaw)
-    return {Translation={X=position.X+math.cos(rad)*700,Y=position.Y+math.sin(rad)*700,Z=position.Z+80},
+    local candidates={}
+    for _,distance in ipairs({700,1100,1500}) do
+        for _,offset in ipairs({0,30,-30,60,-60}) do
+            local angle=rad+math.rad(offset)
+            candidates[#candidates+1]={X=position.X+math.cos(angle)*distance,Y=position.Y+math.sin(angle)*distance,Z=position.Z+80}
+        end
+    end
+    return {Candidates=candidates,Translation={X=position.X+math.cos(rad)*700,Y=position.Y+math.sin(rad)*700,Z=position.Z+80},
         Rotation={X=0,Y=0,Z=math.sin(rad/2),W=math.cos(rad/2)},Scale3D={X=1,Y=1,Z=1}}
 end
 function Engine.begin(ctx,class,transform)
@@ -126,18 +133,25 @@ function Engine.captureDriver(ctx,actor)
     return {pc=ctx.controller,pawn=ctx.pawn,actor=actor,movement=movement,movementId=id(movement),pawnId=id(ctx.pawn),actorId=id(actor),
         hidden=ctx.pawn.bHidden,collision=ctx.pawn:GetActorEnableCollision(),tick=actor:IsActorTickEnabled(),
         pawnMovement=pawnMovement,pawnMovementId=id(pawnMovement),pawnMode=pawnMovement.MovementMode,pawnCustom=pawnMovement.CustomMovementMode,
-        pawnTick=ctx.pawn:IsActorTickEnabled(),eye=actor.BaseEyeHeight,viewTarget=ctx.controller:GetViewTarget()}
+        pawnTick=ctx.pawn:IsActorTickEnabled(),eye=actor.BaseEyeHeight,viewTarget=ctx.controller:GetViewTarget(),
+        native=actor:GetClass():GetFullName()=="BlueprintGeneratedClass /Game/Autok/Abel_Car.Abel_Car_C"}
 end
 function Engine.enterDriver(state)
     state.pawnMovement:StopMovementImmediately()
     state.pawnMovement:SetMovementMode(0,0)
     state.pawn:SetActorTickEnabled(false)
-    state.actor:SetActorTickEnabled(false) -- Suspend traffic Blueprint steering, not the physics component.
+    if not state.native then state.actor:SetActorTickEnabled(false) end -- Only suspend route-less traffic steering.
     state.pc:Possess(state.actor)
     assert(Engine.valid(state.pc.Pawn) and id(state.pc.Pawn)==state.actorId,"The game refused vehicle possession")
     state.pawnMovement:SetMovementMode(0,0)
     state.pawn:SetActorHiddenInGame(true)
     state.pawn:SetActorEnableCollision(false)
+    if state.native then
+        state.movement:SetBrakeInput(0);state.movement:SetHandbrakeInput(false)
+        state.actor:EnableInput(state.pc)
+        state.pc:SetViewTargetWithBlend(state.actor,0,0,0,false)
+        return -- Preserve Abel's own Blueprint input, camera and vehicle settings.
+    end
     if type(state.eye)=="number" then state.actor.BaseEyeHeight=120 end
     local facing=state.actor:K2_GetActorRotation()
     assert(rotation(facing),"Vehicle camera rotation is invalid")
@@ -147,6 +161,8 @@ function Engine.enterDriver(state)
     state.camera=require("native_spawn").actor({controller=state.pc,pawn=state.actor},class,transform,"CameraActor")
     assert(Engine.valid(state.camera),"Could not create driving camera")
     state.cameraId=id(state.camera)
+    assert(state.camera:K2_AttachToActor(state.actor,FName("None",EFindName.FNAME_Find),0,0,0,false)~=false,"Could not attach driving camera")
+    state.camera:K2_SetActorRelativeLocationAndRotation({X=-500,Y=0,Z=220},{Pitch=-12,Yaw=0,Roll=0},false,{},true)
     -- A real CameraActor bypasses character-only ALS camera-manager logic.
     state.pc:SetViewTargetWithBlend(state.camera,0,0,0,false)
 end
@@ -212,6 +228,9 @@ function Engine.exitDriver(state)
         state.pawn:SetActorEnableCollision(state.collision)
     end
     releaseCamera(state)
+    if state.native and pcValid and Engine.valid(state.viewTarget) and controlsCar then
+        state.pc:SetViewTargetWithBlend(state.viewTarget,0,0,0,false)
+    end
     -- A different valid pawn selected by the game is deliberately left possessed.
     return true
 end
@@ -221,10 +240,14 @@ function Engine.driveTick(state)
     assert(id(state.actor)==state.actorId and Engine.valid(state.pc.Pawn) and id(state.pc.Pawn)==state.actorId,"Vehicle control changed")
     if adapter.menuOpen then
         state.movement:SetThrottleInput(0);state.movement:SetSteeringInput(0)
-        state.movement:SetBrakeInput(1);state.movement:SetHandbrakeInput(true)
+        state.movement:SetBrakeInput(1);state.movement:SetHandbrakeInput(true);state.menuBraked=true
         return
     end
+    if state.menuBraked then
+        state.movement:SetBrakeInput(0);state.movement:SetHandbrakeInput(false);state.menuBraked=false
+    end
     if adapter.gameplay():IsGamePaused(state.actor) then return end
+    if state.native then return end -- Unreal handles normal car input and its camera.
     local facing=state.actor:K2_GetActorRotation()
     assert(rotation(facing),"Vehicle camera rotation is invalid")
     local w,s=key(state.pc,"W"),key(state.pc,"S")
@@ -241,11 +264,8 @@ function Engine.driveTick(state)
     -- A fixed forward view also works on traffic pawns without camera input bindings.
     state.pc:SetControlRotation(facing)
     assert(Engine.valid(state.camera) and id(state.camera)==state.cameraId,"Driving camera changed")
-    local p=state.actor:K2_GetActorLocation()
-    assert(vector(p),"Vehicle camera position is invalid")
-    local yaw=math.rad(facing.Yaw%360)
-    state.camera:K2_SetActorLocationAndRotation({X=p.X-math.cos(yaw)*500,Y=p.Y-math.sin(yaw)*500,Z=p.Z+220},
-        {Pitch=-12,Yaw=facing.Yaw,Roll=0},false,{},true)
+    -- Camera follows its attachment every engine frame, not the 16 ms input pump.
+
 end
 function Engine.diagnose()
     local ctx=Engine.player()
@@ -269,17 +289,15 @@ function Engine.diagnose()
             local count=0
             class:ForEachFunction(function(fn)
                 local name=fn:GetFName():ToString()
-                if name:lower():find("repair") or name:lower():find("damage") or name:lower():find("enter") or name:lower():find("exit") then
-                    local params={}
-                    fn:ForEachProperty(function(prop) params[#params+1]=prop:GetFName():ToString() end)
-                    Engine.log("FUNCTION "..fn:GetFullName().." PARAMETERS "..table.concat(params,","))
+                if name:lower():find("repair") or name:lower():find("damage") or name:lower():find("enter") or name:lower():find("exit") or name:lower():find("radio") or name:lower():find("camera") or name:lower():find("input") then
+                    Engine.log("FUNCTION "..fn:GetFullName().." (stable loader exposes no parameter enumeration)")
                 end
             end)
             class:ForEachProperty(function(prop)
                 local name=prop:GetFName():ToString()
                 if count<50 then
                     local lower=name:lower()
-                    if lower:find("health") or lower:find("damage") or lower:find("repair") or lower:find("driver") or lower:find("enter") then
+                    if lower:find("health") or lower:find("damage") or lower:find("repair") or lower:find("driver") or lower:find("enter") or lower:find("radio") or lower:find("camera") or lower:find("player") then
                         count=count+1
                         local ok,value=pcall(function() return actor[name] end)
                         local kind=type(value)

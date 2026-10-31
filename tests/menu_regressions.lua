@@ -45,7 +45,7 @@ case('menu errors restore input and messages remain read-only notifications',fun
     local toast=fixture();toast.menu:notice('Vehicle spawn failed: test');toast.frame()
     check(toast.draws>0 and toast.locks==0 and #toast.requests==0,'closed-menu error notification draws without touching player input')
     local rows=toast.menu:rows()
-    check(rows[1].value=='ON' and rows[2].value=='LANDING GUARD' and rows[3].value:find('6 m/s',1,true),'menu displays current flight, landing protection and selected speed')
+    check(rows[1].value=='ON' and rows[2].value=='AUTO GUARD' and rows[3].value:find('6 m/s',1,true),'menu displays current flight, landing protection and selected speed')
 end)
 case('native menu adapter uses named output parameters and balances input locks',function()
     local oldAdapter,oldEngine=package.loaded.adapter,package.loaded.menu_engine

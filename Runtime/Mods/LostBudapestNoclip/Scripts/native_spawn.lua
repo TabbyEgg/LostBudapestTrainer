@@ -60,7 +60,13 @@ function Spawn.actor(ctx,class,transform,kind)
         local yaw=math.deg(2*math.atan(q.Z,q.W))
         actor:K2_SetActorRotation({Pitch=0,Yaw=yaw,Roll=0},true)
         actor:SetActorScale3D({X=1,Y=1,Z=1})
-        actor:K2_SetActorLocation(transform.Translation,true,{},true)
+        local placed=false
+        for _,target in ipairs(transform.Candidates or {transform.Translation}) do
+            actor:K2_SetActorLocation(target,true,{},true)
+            local actual=actor:K2_GetActorLocation()
+            if (actual.X-target.X)^2+(actual.Y-target.Y)^2+(actual.Z-target.Z)^2 <= 30^2 then placed=true;break end
+        end
+        assert(placed,"All nearby spawn positions were obstructed; no vehicle was counted")
     end,function(e)return debug.traceback(tostring(e),2)end)
     local restored,restoreError=restore()
     if not restored then restored,restoreError=restore() end

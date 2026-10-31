@@ -9,7 +9,16 @@ Vehicles.catalog = {
     {name="Van 1 (traffic)",path="/Game/Traffic_AI_System/Cars/Van/BP_Van_1.BP_Van_1_C"},
     {name="Van 2 (traffic)",path="/Game/Traffic_AI_System/Cars/Van/BP_Van_2.BP_Van_2_C"},
 }
-function Vehicles.new(api) return setmetatable({api=api,selected=1,spawned={},driver=nil},Vehicles) end
+function Vehicles.new(api,config)
+    local maximum=(config or {}).MaxVehicles or 10
+    assert(type(maximum)=="number" and maximum%1==0 and maximum>=1 and maximum<=50,"MaxVehicles must be an integer from 1 to 50")
+    return setmetatable({api=api,selected=1,spawned={},driver=nil,maximum=maximum},Vehicles)
+end
+function Vehicles:count()
+    local count=0
+    for _,actor in ipairs(self.spawned) do if self.api.valid(actor) then count=count+1 end end
+    return count
+end
 function Vehicles:hasWork() return self.driver~=nil and not self.driverFailed end
 function Vehicles:drive()
     if self.driver then
@@ -24,7 +33,7 @@ function Vehicles:drive()
         state=self.api.captureDriver(ctx,target)
         self.api.enterDriver(state)
         self.driver=state;self.driverFailed=false
-        self.api.log("Trainer driving on. W forward; S reverse; A/D steer; Space brake; F5 exit.")
+        self.api.log(state.native and "Abel car native controls and camera active. F5 exits." or "Trainer driving on. W forward; S reverse; A/D steer; Space brake; F5 exit.")
     end)
     if not ok then
         if state then
@@ -52,7 +61,7 @@ function Vehicles:spawn()
     local alive={}
     for _,actor in ipairs(self.spawned) do if self.api.valid(actor) then alive[#alive+1]=actor end end
     self.spawned=alive
-    if #alive>=5 then self.api.log("Five trainer-spawned vehicles are still loaded; spawn limit reached.");return false end
+    if #alive>=self.maximum then self.api.log(tostring(#alive).."/"..self.maximum.." trainer-spawned vehicles loaded; spawn limit reached.");return false end
     local actor
     local stage="player availability"
     local ok,err=xpcall(function()

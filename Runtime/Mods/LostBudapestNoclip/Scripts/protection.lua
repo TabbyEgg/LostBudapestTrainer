@@ -15,6 +15,7 @@ end
 function Protection:reset()
     self:restore()
     self.manual,self.flight,self.landing=false,false,false
+    self.guardWarning=false
 end
 function Protection:toggle()
     self.manual=not self.manual
@@ -34,6 +35,12 @@ function Protection:tick(flying)
             self.saved=captured
         end
         self.api.disableDamage(ctx)
+        if self.api.guardHealthAndFall then
+            local ok,err=pcall(self.api.guardHealthAndFall,ctx,self.saved)
+            if not ok and not self.guardWarning then
+                self.guardWarning=true;self.api.log("Additional health/fall guard unavailable: "..tostring(err))
+            end
+        end
     end
     if self.landing and not flying then
         if self.api.grounded(ctx) then

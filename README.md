@@ -1,4 +1,4 @@
-# Lost Budapest Trainer 0.3.0
+# Lost Budapest Trainer 0.3.1
 
 [**Download the latest ZIP from Releases**](https://github.com/TabbyEgg/LostBudapestTrainer/releases/latest)
 
@@ -41,8 +41,8 @@ HUD event graphs. It never replaces your HUD or changes game assets. If the HUD
 is unavailable it closes automatically and leaves hotkeys active. Menu drawing
 and the revised vehicle spawn path still need in-game verification on this build.
 
-The default binding is `MenuKey = "INSERT"` in `config.lua`; an older preserved
-configuration uses Insert automatically.
+The default binding is `MenuKey = "INS"` in `config.lua` (the stable loader's name for Insert). Older `INSERT` configurations are accepted automatically.
+Repeated key-down callbacks are ignored until you release the key.
 
 ## Controls
 
@@ -64,12 +64,19 @@ Speeds: 2, 6, 12, 24, 48, 72, 96, 144, 240 and 480 m/s. Default is 6 m/s.
 God mode follows the controlled pawn, including trainer vehicle possession,
 and uses Unreal's standard damage permission. Flight automatically keeps
 that protection until grounded for 0.75 game seconds after disabling noclip.
-Custom Blueprint health changes may bypass this flag.
+Native ApplyDamage and ApplyPointDamage calls are intercepted before health
+processing for the protected player only. For Abel, protection also preserves a living player's captured positive `Health`
+value and limits falling velocity to 3 m/s. It does not resurrect a pawn already
+killed by a scripted event or prove protection against every custom instant kill.
+F4 toggles manual protection; flight applies the guard automatically.
 
 Spawn selection: **Abel's car** (default), estate, hatchback, liftback, luxury,
 van 1 and van 2. These are actual classes recorded in the provided game log.
-Only already-loaded blueprints are used; there is a limit of five live trainer
-spawns. Spawn in a clear area; the game may reject an obstructed position. Version 0.3.0
+Only already-loaded blueprints are used. The default cap is **10** live trainer
+spawns, configurable with `MaxVehicles` (1–50); older configs use 10 automatically.
+The menu shows the current count. A spawn only counts after its actual position
+is checked. Blocked placements try other positions ahead; all blocked attempts
+remove the failed car rather than leaving it near the player. Spawn in a clear area; the game may reject an obstructed position. Version 0.3.0
 uses Unreal's native Summon function to avoid the stable loader's nested
 FTransform serialization problem. The temporary spawn helper, class spawn
 settings and player collision state are restored immediately after each call;
@@ -79,12 +86,16 @@ and traceback in the log.
 Try the game's normal enter-vehicle interaction for Abel's car. Traffic cars
 may lack normal player-entry logic. **F5 provides separate trainer driving**:
 stand on foot within 12 metres of Abel's car or a trainer-spawned car and press
-F5. W drives forward, S reverses, A/D steers, Space brakes. This mode uses a
-fixed chase camera and suspends the vehicle's Blueprint traffic tick while
-leaving vehicle physics active. Press F5 again to restore your character,
-collision and visibility. Exit placement is swept; an obstruction can stop the
-character before reaching the intended spot beside the car. Turn noclip off
-before entering trainer driving.
+F5. **Abel's car keeps its own Blueprint controls, ticking and camera**; the
+trainer no longer overrides its throttle, steering or radio-related Blueprint
+logic. Radio operation on newly spawned cars still needs in-game confirmation.
+
+Traffic cars use fallback controls: W forward, S reverse, A/D steering, Space
+brake. Their camera is attached to the car and follows each engine frame, rather
+than being teleported by the input timer. Traffic cars have no verified game
+radio integration. Press F5 again to restore your character, collision and
+visibility. Exit placement is swept; an obstruction can stop the character
+before reaching the intended spot beside the car. Turn noclip off before entry.
 
 F1 prioritizes your occupied car, then the nearest player car/trainer spawn
 within 12 metres. It rights the vehicle and clears motion. It invokes a
@@ -103,9 +114,10 @@ Trainer messages are in `Eltunt_Budapest3\Binaries\Win64\UE4SS.log`.
 F3 now includes nearby vehicle repair/entry function names and relevant property
 names. Send that log if repair or entry is unsupported.
 
-Flight and speed controls were confirmed working by the user. The user reported
-vehicle spawning failing in 0.2.0; this release replaces that native call path.
-The fix, menu, vehicle features and god mode still require in-game verification;
+Flight and speed controls were confirmed working by the user. The user confirmed
+vehicle spawning in 0.3.0. Version 0.3.1 addresses the missing Insert binding,
+blocked placement, native car control/camera and custom health/fall guards.
+These changes still require in-game verification;
 automated Lua tests use simulated game objects. Installer/update fixtures run
 PowerShell on Linux; Windows folder selection remains untested here.
 

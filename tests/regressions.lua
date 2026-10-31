@@ -280,7 +280,7 @@ local function engine()
     function f.statics:IsGamePaused(context)guard('IsGamePaused');assert(context==f.pawn,'pause requires world context');return f.paused or false end
     function f.load()
         package.loaded.adapter=nil;package.loaded.vehicle_engine=nil
-        Key={F1=112,F2=113,F3=114,F4=115,F5=116,F6=117,F7=118,F8=119,F9=120,F10=121};EFindName={FNAME_Find=0}
+        Key={INS=45,F1=112,F2=113,F3=114,F4=115,F5=116,F6=117,F7=118,F8=119,F9=120,F10=121};EFindName={FNAME_Find=0}
         FindAllOf=function(name)guard('FindAllOf');assert(name=='PlayerController');return f.controllers or {f.pc} end
         StaticFindObject=function(path)guard('StaticFindObject');assert(path=='/Script/Engine.Default__GameplayStatics');return f.statics end
         FName=function(name,mode)
@@ -295,8 +295,12 @@ local function engine()
         LoopAsync=function(delay,callback)assert(delay>0 and delay<=100);f.loop=callback end
         RegisterLoadMapPreHook=function()f.forbiddenMapCalls=(f.forbiddenMapCalls or 0)+1;error('Do not register the upstream-broken LoadMapPre callback')end
         RegisterHook=function(path,callback)
-            assert(path=='/Script/Engine.PlayerController:ClientRestart','only the documented player restart hook is used')
-            f.restart=callback;return 1,2
+            if path=='/Script/Engine.PlayerController:ClientRestart' then f.restart=callback
+            else
+                assert(path=='/Script/Engine.GameplayStatics:ApplyDamage' or path=='/Script/Engine.GameplayStatics:ApplyPointDamage','only documented native damage guards are added')
+                f.damageHooks=f.damageHooks or {};f.damageHooks[path]=callback
+            end
+            return 1,2
         end
         f.originalPrint=print;print=function(text)table.insert(f.logs,tostring(text))end
         dofile(TRAINER_SCRIPTS..'/main.lua')
@@ -316,6 +320,7 @@ case('new vehicle keys are queued and failed diagnostics cannot drop active flig
     local f=engine();f.load()
     check(f.registry[Key.F1] and f.registry[Key.F2] and f.registry[Key.F5] and f.registry[Key.F9],'repair, select, driving and spawn keys registered')
     check(f.registry[Key.F3] and f.registry[Key.F4],'diagnostic and god-mode keys registered')
+    check(f.registry[Key.INS] and Key.INSERT==nil,'Insert uses the real stable-loader INS key, not a nonexistent INSERT enum')
     f.press('F6');f.step(0)
     f.press('F5');f.step(0.01);check(not f.pawn.collision,'driving request cannot capture an active noclip pawn')
     f.press('F3');f.step(0.01);check(not f.pawn.collision,'diagnostic read failure leaves flight active')
@@ -323,6 +328,61 @@ case('new vehicle keys are queued and failed diagnostics cannot drop active flig
     f.pawn.bCanBeDamaged=true;f.press('F4');f.step(0.01);check(f.pawn.bCanBeDamaged==false,'god mode key disables the actual player damage property')
     f.inGame=true;f.restart();f.inGame=false;f.step(0.01);check(f.pawn.bCanBeDamaged==false,'manual god mode remains requested across player restarts and vehicle possession')
     f.finish()
+end)
+
+case('native pre-damage guard suppresses protected-player damage before health processing',function()
+    local f=engine();f.load();f.pawn.bCanBeDamaged=true;f.pawn.Health=100
+    local amount={value=150,get=function(self)return self.value end,set=function(self,v)self.value=v end}
+    local target={get=function()return f.pawn end}
+    local hook=f.damageHooks['/Script/Engine.GameplayStatics:ApplyDamage']
+    local point=f.damageHooks['/Script/Engine.GameplayStatics:ApplyPointDamage']
+    check(type(hook)=='function' and type(point)=='function','both native damage entry points registered')
+    f.inGame=true;hook(nil,target,amount);check(amount.value==150,'unprotected game damage remains unchanged');f.inGame=false
+    f.press('F4');f.step(0);f.inGame=true;hook(nil,target,amount)
+    check(amount.value==0 and f.pawn.Health==100,'protected lethal native damage becomes zero before any health loss')
+    local other={IsValid=function()return true end,GetAddress=function()return 44 end,GetFullName=function()return'OtherPawn'end}
+    amount.value=50;point(nil,{get=function()return other end},amount)
+    check(amount.value==50,'damage to other actors is never suppressed')
+    amount.value=25;point(nil,target,amount);check(amount.value==0,'point damage obeys the same protected-player filter')
+    f.inGame=false;f.finish()
+end)
+
+case('held hotkeys cannot repeatedly toggle god mode',function()
+    local f=engine();f.load();f.pawn.bCanBeDamaged=true
+    f.pressed.F4=true;f.press('F4');f.step(0)
+    f.press('F4');f.step(.02);f.press('F4');f.step(.02)
+    local on,off=0,0
+    for _,message in ipairs(f.logs)do
+        if message:find('God mode on',1,true)then on=on+1 end
+        if message:find('God mode off',1,true)then off=off+1 end
+    end
+    check(on==1 and off==0,'repeated down callbacks during one hold cannot turn god mode back off')
+    f.pressed.F4=false;f.step(.02);f.pressed.F4=true;f.press('F4');f.step(.02)
+    local released=false;for _,message in ipairs(f.logs)do if message:find('God mode off',1,true)then released=true end end
+    check(released,'releasing and pressing the key again permits the next toggle')
+    f.finish()
+end)
+
+case('saved INSERT spelling remains compatible with the actual INS enum',function()
+    local previous=Config.MenuKey;Config.MenuKey='INSERT'
+    local f=engine();f.load();check(type(f.registry[Key.INS])=='function','preserved 0.3.0 config registers the Insert alias correctly')
+    f.finish();Config.MenuKey=previous
+end)
+
+case('player custom health and lethal falling speed are guarded without resurrecting dead pawns',function()
+    local f=engine();f.load();local a=require('adapter');f.inGame=true
+    f.pawn.Health=100
+    function f.pawn:GetClass()return {GetFullName=function()return 'BlueprintGeneratedClass /Game/Characters/Blueprints/Abel/Abel.Abel_C'end}end
+    f.pawn.bCanBeDamaged=true
+    local ctx=a.damageContext();local saved=a.captureDamage(ctx)
+    f.pawn.Health=40;f.movement.MovementMode=3;f.movement.Velocity={X=25,Y=-10,Z=-2500}
+    a.guardHealthAndFall(ctx,saved)
+    check(f.pawn.Health==100,'living Abel custom Health restored to the captured positive baseline')
+    check(f.movement.Velocity.Z==-300 and f.movement.Velocity.X==25 and f.movement.Velocity.Y==-10,'lethal vertical fall speed capped while retaining horizontal movement')
+    f.pawn.Health=0;a.guardHealthAndFall(ctx,saved);check(f.pawn.Health==0,'scripted death is not falsely revived by writing positive health to a dead pawn')
+    f.movement.MovementMode=1;f.movement.Velocity.Z=-900;a.guardHealthAndFall(ctx,saved)
+    check(f.movement.Velocity.Z==-900,'walking movement is not altered by the fall guard')
+    f.inGame=false;f.finish()
 end)
 
 case('shipped UE4SS adapter and bindings use typed game-thread calls',function()
