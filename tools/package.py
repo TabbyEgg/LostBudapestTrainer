@@ -24,7 +24,7 @@ for name, expected in DLLS.items():
     assert struct.unpack_from('<H', data, offset+4)[0] == 0x8664
 
 lua = json.loads((ROOT / 'tests/results.json').read_text())
-assert lua['failures'] == 0 and lua['assertions'] == 233
+assert lua['failures'] == 0 and lua['assertions'] == 245
 assert lua['game_runtime_tested'] is False
 for relative, expected in lua['production_source_sha256'].items():
     assert sha((ROOT / relative).read_bytes()) == expected, f'Untested Lua change: {relative}'
@@ -71,7 +71,7 @@ with zipfile.ZipFile(output) as archive:
     for record in records:
         assert sha(archive.read('Runtime/' + record['path'])) == record['sha256']
 report = dict(version=VERSION, path=str(output), size=output.stat().st_size,
-              sha256=sha(output.read_bytes()), entries=len(files), lua_assertions=233,
+              sha256=sha(output.read_bytes()), entries=len(files), lua_assertions=245,
               installer_assertions=55, actual_payload_install_uninstall_verified=True,
               archive_crc_and_entry_bytes_verified=True, game_runtime_tested=False)
 output.with_suffix('.json').write_text(json.dumps(report, indent=2) + '\n')

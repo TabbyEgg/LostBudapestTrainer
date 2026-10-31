@@ -30,7 +30,7 @@ end
 
 local menu=require("menu").new(require("menu_engine"),function()
     return {flying=controller:isEnabled(),god=protection.manual,protected=protection.landing or protection.flight,
-        speed=config.Speeds[controller.speedIndex],model=vehicles.catalog[vehicles.selected].name,driving=vehicles.driver~=nil,spawned=vehicles:count(),maximum=vehicles.maximum}
+        speed=config.Speeds[controller.speedIndex],model=vehicles.catalog[vehicles.selected].name,driving=vehicles.driver~=nil,spawned=vehicles:count(),maximum=vehicles.maximum,boost=vehicles.boostSpeeds[vehicles.boostIndex]}
 end,request)
 adapter.onLog=function(message)menu:notice(message)end
 local menuName=config.MenuKey or "INS"
@@ -70,6 +70,8 @@ LoopAsync(16, function()
                     elseif action == "repair" then vehicles:repair()
                     elseif action == "cycleVehicle" then vehicles:cycle()
                     elseif action == "previousVehicle" then vehicles:cycle(-1)
+                    elseif action == "boostFaster" then vehicles:boost(1)
+                    elseif action == "boostSlower" then vehicles:boost(-1)
                     elseif action == "spawnVehicle" then vehicles:spawn()
                     elseif action == "godmode" then protection:toggle()
                     elseif action == "return" then controller:disable(true)

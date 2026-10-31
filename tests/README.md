@@ -50,3 +50,7 @@ menu braking cleanup, custom Health preservation and vertical fall limits.
 Native damage hook cases verify player-only pre-damage suppression for lethal
 ApplyDamage and ApplyPointDamage while other actors and unprotected damage
 remain unchanged. These checks do not execute the game's Blueprint death logic.
+
+Boost cases cover its off default, bounded selection, normal-car support,
+Shift/W/brake gating, forward-only acceleration, target cutoff and failure
+cleanup without changing native steering or camera.

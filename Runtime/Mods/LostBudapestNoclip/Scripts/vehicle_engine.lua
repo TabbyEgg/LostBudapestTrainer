@@ -234,7 +234,33 @@ function Engine.exitDriver(state)
     -- A different valid pawn selected by the game is deliberately left possessed.
     return true
 end
-function Engine.driveTick(state)
+local function applyBoost(state,targetKmh)
+    if not targetKmh or targetKmh<=0 or adapter.menuOpen then return end
+    if not key(state.pc,"W") or not (key(state.pc,"LeftShift") or key(state.pc,"RightShift")) or key(state.pc,"SpaceBar") then return end
+    if state.movement:GetCurrentGear()<0 then return end
+    local mesh=state.actor.Mesh
+    assert(Engine.valid(mesh),"Vehicle physics mesh is unavailable")
+    local bone=FName("None",EFindName.FNAME_Find)
+    local velocity=mesh:GetPhysicsLinearVelocity(bone)
+    local facing=state.actor:K2_GetActorRotation()
+    assert(vector(velocity) and rotation(facing),"Vehicle boost physics data is invalid")
+    local yaw=math.rad(facing.Yaw%360)
+    local x,y=math.cos(yaw),math.sin(yaw)
+    local speed=velocity.X*x+velocity.Y*y
+    if speed < -100 then return end
+    local acceleration=math.min(1200,math.max(0,(targetKmh/0.036-speed)*2))
+    if acceleration>0 then mesh:AddForce({X=x*acceleration,Y=y*acceleration,Z=0},bone,true) end
+end
+function Engine.boostControlled(targetKmh)
+    if adapter.menuOpen then return end
+    local ctx=Engine.player()
+    if not ctx then return end
+    local class=ctx.pawn:GetClass():GetFullName()
+    if class~="BlueprintGeneratedClass /Game/Autok/Abel_Car.Abel_Car_C" and not class:find("/Game/Traffic_AI_System/Cars/",1,true) then return end
+    local movement=ctx.pawn.VehicleMovement
+    if Engine.valid(movement) then applyBoost({pc=ctx.controller,actor=ctx.pawn,movement=movement},targetKmh)end
+end
+function Engine.driveTick(state,targetKmh)
     assert(Engine.valid(state.pc) and Engine.valid(state.actor) and Engine.valid(state.movement),"The driving context changed")
     assert(id(state.movement)==state.movementId,"The vehicle movement component was replaced")
     assert(id(state.actor)==state.actorId and Engine.valid(state.pc.Pawn) and id(state.pc.Pawn)==state.actorId,"Vehicle control changed")
@@ -247,7 +273,7 @@ function Engine.driveTick(state)
         state.movement:SetBrakeInput(0);state.movement:SetHandbrakeInput(false);state.menuBraked=false
     end
     if adapter.gameplay():IsGamePaused(state.actor) then return end
-    if state.native then return end -- Unreal handles normal car input and its camera.
+    if state.native then applyBoost(state,targetKmh);return end -- Preserve normal input and camera.
     local facing=state.actor:K2_GetActorRotation()
     assert(rotation(facing),"Vehicle camera rotation is invalid")
     local w,s=key(state.pc,"W"),key(state.pc,"S")
@@ -261,6 +287,7 @@ function Engine.driveTick(state)
     state.movement:SetSteeringInput((key(state.pc,"D") and 1 or 0)-(key(state.pc,"A") and 1 or 0))
     state.movement:SetBrakeInput(brake and 1 or 0)
     state.movement:SetHandbrakeInput(brake)
+    applyBoost(state,targetKmh)
     -- A fixed forward view also works on traffic pawns without camera input bindings.
     state.pc:SetControlRotation(facing)
     assert(Engine.valid(state.camera) and id(state.camera)==state.cameraId,"Driving camera changed")

@@ -24,6 +24,19 @@ case('vehicle spawning uses real catalog classes, rejects blocked spawns and cle
     local selected=v.selected;for i=1,#v.catalog do v:cycle() end
     check(v.selected==selected,'vehicle selection wraps through seven options')
 end)
+case('vehicle boost starts off, supports normal driving and returns to off cleanly',function()
+    local calls,last=0,nil
+    local api={log=function()end,boostControlled=function(speed)calls=calls+1;last=speed end}
+    local v=Vehicles.new(api)
+    check(v.boostSpeeds[v.boostIndex]==0 and not v:hasWork(),'vehicle boost is off by default')
+    v:boost(1);v:tick();check(v:hasWork() and last==60 and calls==1,'selected boost also polls a normally entered game vehicle')
+    for i=1,20 do v:boost(1)end
+    v:tick();check(last==300,'boost selection stops at its highest supported target')
+    for i=1,20 do v:boost(-1)end
+    local before=calls;v:tick();check(not v:hasWork() and calls==before,'off stops the boost pump without altering driving')
+    v:boost(1);api.boostControlled=function()error('mesh replaced')end;v:tick()
+    check(v.boostIndex==1 and not v:hasWork(),'boost failure returns to off rather than writing into a changed vehicle')
+end)
 case('trainer driving validates entry, rolls back failure and restores on exit',function()
     local exited,ticked=0,0
     local a={log=function()end,player=function()return{}end,repairTarget=function()return{}end}
@@ -79,6 +92,7 @@ case('native vehicle adapter uses native spawn helper, health guard and reversib
     function player.CharacterMovement:StopMovementImmediately()end
     function player.CharacterMovement:SetMovementMode(mode,custom)self.MovementMode=mode;self.CustomMovementMode=custom end
     local playerPos={X=0,Y=0,Z=90}
+    function player:GetClass()return {GetFullName=function()return 'BlueprintGeneratedClass /Game/Characters/Blueprints/Abel/Abel.Abel_C'end}end
     function player:GetActorEnableCollision()return self.collision end
     function player:SetActorEnableCollision(value)self.collision=value end
     function player:SetActorHiddenInGame(value)self.bHidden=value end
@@ -98,6 +112,12 @@ case('native vehicle adapter uses native spawn helper, health guard and reversib
     local mesh=object('Mesh',3)
     function mesh:SetPhysicsLinearVelocity(vel,add,bone)assert(vel.X==0 and vel.Y==0 and vel.Z==0 and add==false and bone:ToString()=='None');self.stopped=true end
     function mesh:SetPhysicsAngularVelocityInDegrees(vel,add,bone)assert(vel.Z==0 and add==false and bone:ToString()=='None')end
+    mesh.velocity={X=0,Y=0,Z=0};mesh.forceCalls=0
+    function mesh:GetPhysicsLinearVelocity(bone)assert(bone:ToString()=='None');return self.velocity end
+    function mesh:AddForce(force,bone,acceleration)
+        assert(bone:ToString()=='None' and acceleration==true and force.Z==0)
+        self.forceCalls=self.forceCalls+1;self.force=force
+    end
     vehicle.Mesh=mesh
     local movement=object('Movement',4);movement.gear=0
     function movement:GetCurrentGear()return self.gear end
@@ -219,6 +239,18 @@ case('native vehicle adapter uses native spawn helper, health guard and reversib
         check(movement.handbrake and movement.brake==1,'open menu safely brakes the native car')
         package.loaded.adapter.menuOpen=false;e.driveTick(native)
         check(not movement.handbrake and movement.brake==0,'closing the menu releases its native-car parking brake')
+        pc.keys.LeftShift=true;pc.keys.W=true;pc.keys.SpaceBar=false;movement.gear=1
+        e.driveTick(native,150)
+        check(mesh.forceCalls==1 and mesh.force.Y>0 and math.abs(mesh.force.X)<.001,'Shift and W apply bounded forward physical acceleration without changing steering or vertical velocity')
+        pc.keys.LeftShift=false;e.driveTick(native,150);check(mesh.forceCalls==1,'releasing Shift immediately stops boost force')
+        pc.keys.LeftShift=true;mesh.velocity={X=0,Y=5000,Z=0};e.driveTick(native,150)
+        check(mesh.forceCalls==1,'boost adds no force once the selected target speed is exceeded')
+        mesh.velocity={X=0,Y=0,Z=0};pc.keys.SpaceBar=true;e.driveTick(native,150)
+        check(mesh.forceCalls==1,'braking suppresses boost')
+        pc.keys.SpaceBar=false;context.pawn=player;e.boostControlled(150)
+        check(mesh.forceCalls==1,'boost ignores the walking pawn without probing car-only properties')
+        context.pawn=vehicle;e.boostControlled(150);check(mesh.forceCalls==2,'boost works in a normally possessed native vehicle too')
+        context.pawn=player;pc.keys.LeftShift=false
         check(e.exitDriver(native) and pc.Pawn==player and pc.viewTarget==player,'native exit restores the original character and view')
         class=klass('/Game/Traffic_AI_System/Cars/Hatch/BP_Hatch.BP_Hatch_C',1)
         local destroyed=e.captureDriver(context,vehicle);e.enterDriver(destroyed);vehicle.alive=false;pc.Pawn=nil

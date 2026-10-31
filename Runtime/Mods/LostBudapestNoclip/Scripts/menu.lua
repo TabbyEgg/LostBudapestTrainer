@@ -49,6 +49,7 @@ function Menu:rows()
         {label='Flight speed',value=string.format('<  %g m/s  >',s.speed/100),action='faster',left='slower',right='faster',stay=true},
         {label='Return to flight start',value='F10',action='return'},
         {label='Vehicle model',value='<  '..s.model..'  >',action='cycleVehicle',left='previousVehicle',right='cycleVehicle',stay=true},
+        {label='Vehicle boost',value=(s.boost or 0)>0 and ('<  '..s.boost..' km/h  >') or '<  OFF  >',action='boostFaster',left='boostSlower',right='boostFaster',stay=true},
         {label='Spawn selected vehicle',value=string.format('%d/%d   F9',s.spawned or 0,s.maximum or 10),action='spawnVehicle'},
         {label=s.driving and 'Exit trainer driving' or 'Enter nearby vehicle',value='F5',action='drive'},
         {label='Recover / repair vehicle',value='F1',action='repair'},
@@ -87,7 +88,9 @@ function Menu:frame(raw)
         local hud,width,height=self.api.hud(raw,self.context)
         if not hud or type(width)~='number' or type(height)~='number' or width<320 or height<240 then return end
         self.stale=0
-        local scale=math.max(.3,math.min(1.5,width/560,height/690))
+        local rows=self:rows()
+        local extra=math.max(0,#rows-10)*39
+        local scale=math.max(.3,math.min(1.5,width/560,height/(690+extra)))
         local x,y=28*scale,28*scale
         local w,top,rh=500*scale,100*scale,39*scale
         local input=self.api.input(self.context)
@@ -99,7 +102,6 @@ function Menu:frame(raw)
             self.api.lock(self.locked)
         end
         if pressed('back') then self:close();return end
-        local rows=self:rows()
         if pressed('up') then self.selected=(self.selected-2)%#rows+1 end
         if pressed('down') then self.selected=self.selected%#rows+1 end
         local hover=nil
@@ -121,8 +123,8 @@ function Menu:frame(raw)
         if not self.open then return end
         local function rect(c,a,b,cw,ch)self.api.rect(hud,c,a,b,cw,ch)end
         local function text(t,c,a,b,size)self.api.text(hud,t,c,a,b,size*scale)end
-        rect(colors.panel,x,y,w,608*scale)
-        rect(colors.accent,x,y,4*scale,608*scale)
+        rect(colors.panel,x,y,w,(608+extra)*scale)
+        rect(colors.accent,x,y,4*scale,(608+extra)*scale)
         text('LOST BUDAPEST',colors.accent,x+20*scale,y+17*scale,1.15)
         text('TRAINER  /  0.3.1',colors.text,x+20*scale,y+48*scale,.85)
         text('Mouse or arrows + Enter',colors.muted,x+20*scale,y+75*scale,.72)
@@ -132,9 +134,9 @@ function Menu:frame(raw)
             text(row.label,colors.text,x+20*scale,yy+9*scale,.78)
             text(row.value,colors.accent,x+265*scale,yy+9*scale,.71)
         end
-        text('LATEST MESSAGE',colors.muted,x+20*scale,y+505*scale,.68)
+        text('LATEST MESSAGE',colors.muted,x+20*scale,y+(505+extra)*scale,.68)
         local message=self.message
-        for i=1,3 do text(message:sub((i-1)*64+1,i*64),colors.text,x+20*scale,y+(525+(i-1)*21)*scale,.67) end
+        for i=1,3 do text(message:sub((i-1)*64+1,i*64),colors.text,x+20*scale,y+(525+extra+(i-1)*21)*scale,.67) end
     end)
     if not ok then self:close();self.api.log('Trainer menu stopped safely: '..tostring(err)) end
 end

@@ -12,14 +12,19 @@ Vehicles.catalog = {
 function Vehicles.new(api,config)
     local maximum=(config or {}).MaxVehicles or 10
     assert(type(maximum)=="number" and maximum%1==0 and maximum>=1 and maximum<=50,"MaxVehicles must be an integer from 1 to 50")
-    return setmetatable({api=api,selected=1,spawned={},driver=nil,maximum=maximum},Vehicles)
+    return setmetatable({api=api,selected=1,spawned={},driver=nil,maximum=maximum,boostIndex=1,boostSpeeds={0,60,100,150,200,300}},Vehicles)
 end
 function Vehicles:count()
     local count=0
     for _,actor in ipairs(self.spawned) do if self.api.valid(actor) then count=count+1 end end
     return count
 end
-function Vehicles:hasWork() return self.driver~=nil and not self.driverFailed end
+function Vehicles:hasWork() return (self.driver~=nil and not self.driverFailed) or self.boostIndex>1 end
+function Vehicles:boost(direction)
+    self.boostIndex=math.max(1,math.min(#self.boostSpeeds,self.boostIndex+(direction or 1)))
+    local speed=self.boostSpeeds[self.boostIndex]
+    self.api.log(speed==0 and "Vehicle boost off." or ("Vehicle boost target: "..speed.." km/h. Hold Shift + W while driving."))
+end
 function Vehicles:drive()
     if self.driver then
         local ok,result=pcall(self.api.exitDriver,self.driver)
@@ -45,8 +50,15 @@ function Vehicles:drive()
     return true
 end
 function Vehicles:tick()
-    if not self.driver or self.driverFailed then return end
-    local ok,err=pcall(self.api.driveTick,self.driver)
+    if not self.driver then
+        if self.boostIndex>1 and self.api.boostControlled then
+            local ok,err=pcall(self.api.boostControlled,self.boostSpeeds[self.boostIndex])
+            if not ok then self.boostIndex=1;self.api.log("Vehicle boost stopped: "..tostring(err)) end
+        end
+        return
+    end
+    if self.driverFailed then return end
+    local ok,err=pcall(self.api.driveTick,self.driver,self.boostSpeeds[self.boostIndex])
     if not ok then
         self.driverFailed=true
         self.api.log("Trainer driving stopped: "..tostring(err))

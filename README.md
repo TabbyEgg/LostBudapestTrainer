@@ -44,6 +44,15 @@ and the revised vehicle spawn path still need in-game verification on this build
 The default binding is `MenuKey = "INS"` in `config.lua` (the stable loader's name for Insert). Older `INSERT` configurations are accepted automatically.
 Repeated key-down callbacks are ignored until you release the key.
 
+### Vehicle boost
+
+The menu's **Vehicle boost** row selects Off, 60, 100, 150, 200 or 300 km/h.
+Hold **Shift + W** while driving to add forward acceleration toward that target.
+Release Shift or brake to stop the extra thrust. Boost starts off and works with
+trainer driving or a normally entered supported car. It preserves native
+steering/camera and applies no vertical force; it is a boost target rather than
+a hard speed limiter. New boost behaviour still needs an in-game test.
+
 ## Controls
 
 | Key | Action |

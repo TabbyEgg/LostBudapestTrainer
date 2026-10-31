@@ -2,6 +2,7 @@
 
 - Fixed **Insert**: UE4SS 3.0.1 calls the key `INS`, so 0.3.0 never registered it. Preserved `INSERT` configurations now work too.
 - Held hotkeys no longer repeatedly toggle protection or consume multiple vehicle slots until released.
+- Added **Vehicle boost** in the menu: Off, 60, 100, 150, 200 or 300 km/h targets. Hold Shift + W to add forward thrust; releasing Shift or braking stops it. Starts off and preserves native steering/camera.
 - Default vehicle cap increased to **10**, configurable with `MaxVehicles`. Actual spawn positions are checked and blocked placements try alternatives ahead. Failed placements are removed and never counted.
 - Abel's car now retains its own Blueprint input, ticking and camera. The trainer no longer imposes generic throttle/steering or a separate fixed camera on it. Radio behaviour needs an in-game check; traffic radio is not implemented.
 - Traffic fallback camera is attached to the vehicle rather than updated by an asynchronous timer. Entry and menu close release the parking brake correctly.
