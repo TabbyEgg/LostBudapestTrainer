@@ -1,6 +1,6 @@
-# Lost Budapest Noclip 0.1.0
+# Lost Budapest Noclip 0.1.1
 
-[**Download the ready-to-install trainer ZIP**](https://github.com/TabbyEgg/LostBudapestTrainer/raw/refs/heads/main/downloads/LostBudapest-Noclip-0.1.0.zip)
+[**Download the ready-to-install trainer ZIP**](https://github.com/TabbyEgg/LostBudapestTrainer/raw/refs/heads/main/downloads/LostBudapest-Noclip-0.1.1.zip)
 
 A removable noclip/free-flight trainer for the Windows Lost Budapest demo.
 Built for the supplied `EltuntBP-Win64-Shipping.exe`: Unreal Engine 4.27.2,
@@ -49,7 +49,7 @@ since installation are preserved instead of being overwritten during removal.
 
 ## Status and testing
 
-Messages beginning `[Lost Budapest Noclip 0.1.0]` appear in
+Messages beginning `[Lost Budapest Noclip 0.1.1]` appear in
 `Eltunt_Budapest3\Binaries\Win64\UE4SS.log`.
 
 This is a first experimental build. The submitted executable was statically
@@ -70,3 +70,11 @@ redistributed under its MIT license; see `licenses/` and `THIRD-PARTY.md`.
 For a Git source checkout, run `python tools/fetch_loader.py` first to restore
 the pinned official loader DLLs, then use Install.cmd. The downloadable ZIP
 already contains those DLLs and requires no Python installation to use.
+
+## Vehicle diagnostics
+
+Stand beside an enterable vehicle and press **F11** once. Send
+`Eltunt_Budapest3\Binaries\Win64\UE4SS.log`. The diagnostic reads loaded
+vehicle/pawn class names and available health/controller fields; it does not
+repair or spawn anything yet. If upgrading, close the game and uninstall the
+previous trainer before installing this version.

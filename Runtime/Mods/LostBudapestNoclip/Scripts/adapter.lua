@@ -36,7 +36,7 @@ local function down(controller, name)
 end
 
 function Adapter.log(message)
-    print("[Lost Budapest Noclip 0.1.0] " .. message .. "\n")
+    print("[Lost Budapest Noclip 0.1.1] " .. message .. "\n")
 end
 
 function Adapter.reset()
@@ -136,6 +136,44 @@ function Adapter.input(ctx)
     return {forward = down(pc, "W"), back = down(pc, "S"), left = down(pc, "A"), right = down(pc, "D"),
         up = down(pc, "E") or down(pc, "SpaceBar"), down = down(pc, "Q") or down(pc, "LeftControl"),
         boost = down(pc, "LeftShift") or down(pc, "RightShift")}
+end
+
+function Adapter.diagnose()
+    Adapter.log("VEHICLE DIAGNOSTIC BEGIN (read-only)")
+    local ctx = Adapter.resolve()
+    local origin = ctx and Adapter.location(ctx) or nil
+    local seen, count = {}, 0
+    for _, kind in ipairs({"WheeledVehicle", "WheeledVehicleMovementComponent", "Pawn", "PlayerController"}) do
+        local objects = FindAllOf(kind) or {}
+        Adapter.log(kind .. " loaded=" .. #objects)
+        for _, object in ipairs(objects) do
+            if count >= 100 then break end
+            local ok, err = pcall(function()
+                if not valid(object) then return end
+                local name = object:GetFullName()
+                if seen[name] then return end
+                local locationOk, location = pcall(function() return object:K2_GetActorLocation() end)
+                if origin and locationOk then
+                    local dx,dy,dz=location.X-origin.X,location.Y-origin.Y,location.Z-origin.Z
+                    if dx*dx+dy*dy+dz*dz > 10000*10000 then return end
+                end
+                seen[name], count = true, count + 1
+                Adapter.log("OBJECT " .. name .. " CLASS " .. object:GetClass():GetFullName())
+                for _, field in ipairs({"Health", "MaxHealth", "VehicleHealth", "Damage", "bIsDead", "bDestroyed", "Controller", "Pawn", "VehicleMovement", "Mesh"}) do
+                    local readOk, value = pcall(function() return object[field] end)
+                    if readOk and value ~= nil then
+                        local textOk, text = pcall(function()
+                            if type(value)=="userdata" then return value:GetFullName() end
+                            return tostring(value)
+                        end)
+                        if textOk then Adapter.log("  " .. field .. "=" .. text) end
+                    end
+                end
+            end)
+            if not ok then Adapter.log("Skipped unavailable object: " .. tostring(err)) end
+        end
+    end
+    Adapter.log("VEHICLE DIAGNOSTIC END; stand beside a working car and send UE4SS.log")
 end
 
 return Adapter

@@ -7,7 +7,7 @@ import struct
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = '0.1.0'
+VERSION = '0.1.1'
 DLLS = {
     'UE4SS.dll': '8ac18fbffc1ef96b0662d4a2d537b3f224c26d65caaba7989a9404c566102b26',
     'dwmapi.dll': 'ce596412befa68c30b7f88f65beb77d9bdad55e9b96a276a5a9cf690c63f24bb',

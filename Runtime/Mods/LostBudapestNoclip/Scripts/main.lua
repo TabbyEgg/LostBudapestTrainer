@@ -14,6 +14,8 @@ for name, action in pairs({Toggle = "toggle", Slower = "slower", Faster = "faste
     RegisterKeyBind(key, function() request(action) end)
 end
 
+if Key.F11 then RegisterKeyBind(Key.F11, function() request("diagnose") end) end
+
 LoopAsync(16, function()
     if not queued and (#actions > 0 or controller:hasWork()) then
         queued = true
@@ -24,7 +26,8 @@ LoopAsync(16, function()
                 local pending = actions
                 actions = {}
                 for _, action in ipairs(pending) do
-                    if action == "return" then controller:disable(true)
+                    if action == "diagnose" then adapter.diagnose()
+                    elseif action == "return" then controller:disable(true)
                     else controller[action](controller) end
                 end
                 controller:tick()
