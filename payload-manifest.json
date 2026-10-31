@@ -3,8 +3,8 @@
   "files": [
     {
       "path": "Mods/LostBudapestNoclip/Scripts/adapter.lua",
-      "size": 7614,
-      "sha256": "b74b30131b3e20b228c524daefcd6735908355b76e462b4ba93f4912ec054034"
+      "size": 8278,
+      "sha256": "09e0c61891d7805e4dd453797231a253582d973c45c4559ad1aee8429d073734"
     },
     {
       "path": "Mods/LostBudapestNoclip/Scripts/config.lua",
@@ -18,8 +18,13 @@
     },
     {
       "path": "Mods/LostBudapestNoclip/Scripts/main.lua",
-      "size": 2613,
-      "sha256": "d6afec58b169b3554ad88e349c520b1ff42b657f62c0f729cfa13551c84f4424"
+      "size": 2922,
+      "sha256": "0968b463fa92b883e7167b51b9a9e411085227c073dc0c364a5cbfdfd65cd231"
+    },
+    {
+      "path": "Mods/LostBudapestNoclip/Scripts/protection.lua",
+      "size": 1906,
+      "sha256": "9063e16a444f316a5357a53895dd60f31a2e72f773152b9b631d87a7fa4520e1"
     },
     {
       "path": "UE4SS-settings.ini",

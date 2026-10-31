@@ -416,4 +416,28 @@ case('packaged startup settings disable unsafe script hot reload',function()
     check(text:match('GuiConsoleEnabled%s*=%s*0')~=nil and text:match('GuiConsoleVisible%s*=%s*0')~=nil,'normal trainer startup does not open a debug GUI')
 end)
 
+case('god mode and post-flight landing guard preserve original damage permission',function()
+    local P=require('protection')
+    local ctx={identity='A',damage=true};local current=ctx;local clock=0;local grounded=true
+    local a={resolve=function()return current end,same=function(c,v)return c.identity==v.identity end,
+      captureDamage=function(c)return{ctx=c,identity=c.identity,damage=c.damage}end,
+      disableDamage=function(c)c.damage=false end,restoreDamage=function(v)v.ctx.damage=v.damage end,
+      grounded=function()return grounded end,time=function()return clock end,log=function()end}
+    local p=P.new(a)
+    p:tick(false);check(ctx.damage,'initial state unchanged')
+    p:toggle();p:tick(false);check(not ctx.damage,'manual god mode blocks damage')
+    p:toggle();p:tick(false);check(not ctx.damage,'off retains landing grace')
+    clock=0.8;p:tick(false);check(ctx.damage,'off restores original damage')
+    p:tick(true);check(not ctx.damage,'flight automatically protects')
+    p:tick(false);check(not ctx.damage,'first walking frame does not remove flight protection')
+    grounded=false;clock=1;p:tick(false);check(not ctx.damage,'fall retains protection')
+    grounded=true;clock=10;p:tick(false);check(not ctx.damage,'landing starts grace after impact')
+    clock=10.8;p:tick(false);check(ctx.damage,'settled landing restores damage')
+    ctx.damage=false;p:toggle();p:tick(false);p:reset();check(not ctx.damage,'preexisting invulnerability preserved')
+    ctx.damage=true;p:toggle();p:tick(false);current={identity='B',damage=true};p:tick(false)
+    check(ctx.damage,'old pawn restored when possession changes')
+    check(not current.damage,'manual god applies to new controlled character')
+    p:reset();check(current.damage and not p:hasWork(),'restart restores original permission and disables god mode')
+end)
+
 TEST_PRINT(string.format('RESULT: %d assertions; %d failures.',TEST_ASSERTIONS,TEST_FAILURES))

@@ -1,16 +1,17 @@
 {
-  "assertions": 104,
+  "assertions": 117,
   "failures": 0,
   "lua_implementation": "Lua 5.4",
   "production_source_sha256": {
-    "Runtime/Mods/LostBudapestNoclip/Scripts/adapter.lua": "b74b30131b3e20b228c524daefcd6735908355b76e462b4ba93f4912ec054034",
+    "Runtime/Mods/LostBudapestNoclip/Scripts/adapter.lua": "09e0c61891d7805e4dd453797231a253582d973c45c4559ad1aee8429d073734",
     "Runtime/Mods/LostBudapestNoclip/Scripts/config.lua": "b72cf94f5295156719aeb296c167d50383a017fb24d6485bc48175c7f73447df",
     "Runtime/Mods/LostBudapestNoclip/Scripts/controller.lua": "15f19f82eedae42916a788c541e0e6e5d50cf31fed403e8622a03d8333314871",
-    "Runtime/Mods/LostBudapestNoclip/Scripts/main.lua": "d6afec58b169b3554ad88e349c520b1ff42b657f62c0f729cfa13551c84f4424"
+    "Runtime/Mods/LostBudapestNoclip/Scripts/main.lua": "0968b463fa92b883e7167b51b9a9e411085227c073dc0c364a5cbfdfd65cd231",
+    "Runtime/Mods/LostBudapestNoclip/Scripts/protection.lua": "9063e16a444f316a5357a53895dd60f31a2e72f773152b9b631d87a7fa4520e1"
   },
   "harness_sha256": {
     "run.py": "72f0fb309c0c1e680b65232297b19e1d50b0e11fe83020e9e833378825fd4111",
-    "regressions.lua": "daa4cc9179605bb66756d9c12de6845c9ec67ab5125b7a3d8b6ce58f07bed90b"
+    "regressions.lua": "6df6987bc125ace0472793c83150e1bb628078d687c0a3e0db1f60d277f39be8"
   },
   "game_runtime_tested": false,
   "ue4ss_native_loader_executed": false

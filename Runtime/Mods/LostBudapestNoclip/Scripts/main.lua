@@ -2,6 +2,7 @@ local config = require("config")
 local adapter = require("adapter")
 local Controller = require("controller")
 local controller = Controller.new(config, adapter)
+local protection = require("protection").new(adapter)
 local actions, queued = {}, false
 
 local function request(action)
@@ -14,10 +15,11 @@ for name, action in pairs({Toggle = "toggle", Slower = "slower", Faster = "faste
     RegisterKeyBind(key, function() request(action) end)
 end
 
-if Key.F11 then RegisterKeyBind(Key.F11, function() request("diagnose") end) end
+if Key.F3 then RegisterKeyBind(Key.F3, function() request("diagnose") end) end
+if Key.F4 then RegisterKeyBind(Key.F4, function() request("godmode") end) end
 
 LoopAsync(16, function()
-    if not queued and (#actions > 0 or controller:hasWork()) then
+    if not queued and (#actions > 0 or controller:hasWork() or protection:hasWork()) then
         queued = true
         local ok, err = pcall(ExecuteInGameThread, function()
             -- Drop the pending flag even if a callback fails. Only one queued
@@ -27,10 +29,12 @@ LoopAsync(16, function()
                 actions = {}
                 for _, action in ipairs(pending) do
                     if action == "diagnose" then adapter.diagnose()
+                    elseif action == "godmode" then protection:toggle()
                     elseif action == "return" then controller:disable(true)
                     else controller[action](controller) end
                 end
                 controller:tick()
+                protection:tick(controller:isEnabled())
             end)
             queued = false
             if not callbackOk then
@@ -52,6 +56,7 @@ if type(RegisterHook) == "function" then
     local ok, err = pcall(RegisterHook, "/Script/Engine.PlayerController:ClientRestart", function()
         actions = {}
         controller:disable(false)
+        protection:reset()
         adapter.reset()
         -- No return override: Unreal retains its normal player restart behavior.
     end)

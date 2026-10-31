@@ -17,4 +17,5 @@ PASS: native no-motion return and refused return are distinguished
 PASS: destroyed movement cleanup verifies the original pawn identity first
 PASS: non-finite engine data stops before unsafe movement
 PASS: packaged startup settings disable unsafe script hot reload
-RESULT: 104 assertions; 0 failures.
+PASS: god mode and post-flight landing guard preserve original damage permission
+RESULT: 117 assertions; 0 failures.

@@ -36,7 +36,7 @@ local function down(controller, name)
 end
 
 function Adapter.log(message)
-    print("[Lost Budapest Noclip 0.1.1] " .. message .. "\n")
+    print("[Lost Budapest Noclip 0.1.2] " .. message .. "\n")
 end
 
 function Adapter.reset()
@@ -136,6 +136,23 @@ function Adapter.input(ctx)
     return {forward = down(pc, "W"), back = down(pc, "S"), left = down(pc, "A"), right = down(pc, "D"),
         up = down(pc, "E") or down(pc, "SpaceBar"), down = down(pc, "Q") or down(pc, "LeftControl"),
         boost = down(pc, "LeftShift") or down(pc, "RightShift")}
+end
+
+function Adapter.captureDamage(ctx)
+    local ok, value = pcall(function() return ctx.pawn.bCanBeDamaged end)
+    if not ok or type(value) ~= "boolean" then return nil end
+    return {ctx=ctx,identity=ctx.identity,pawnIdentity=identity(ctx.pawn),damage=value}
+end
+function Adapter.disableDamage(ctx) ctx.pawn.bCanBeDamaged=false end
+function Adapter.restoreDamage(saved)
+    local pawn=saved.ctx.pawn
+    if valid(pawn) and identity(pawn)==saved.pawnIdentity and pawn.bCanBeDamaged==false then
+        pawn.bCanBeDamaged=saved.damage
+    end
+end
+function Adapter.grounded(ctx)
+    local mode=ctx.movement.MovementMode
+    return mode==1 or mode==2 or mode==4
 end
 
 function Adapter.diagnose()

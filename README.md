@@ -1,6 +1,6 @@
-# Lost Budapest Noclip 0.1.1
+# Lost Budapest Noclip 0.1.2
 
-[**Download the ready-to-install trainer ZIP**](https://github.com/TabbyEgg/LostBudapestTrainer/raw/refs/heads/main/downloads/LostBudapest-Noclip-0.1.1.zip)
+[**Download the ready-to-install trainer ZIP**](https://github.com/TabbyEgg/LostBudapestTrainer/raw/refs/heads/main/downloads/LostBudapest-Noclip-0.1.2.zip)
 
 A removable noclip/free-flight trainer for the Windows Lost Budapest demo.
 Built for the supplied `EltuntBP-Win64-Shipping.exe`: Unreal Engine 4.27.2,
@@ -49,7 +49,7 @@ since installation are preserved instead of being overwritten during removal.
 
 ## Status and testing
 
-Messages beginning `[Lost Budapest Noclip 0.1.1]` appear in
+Messages beginning `[Lost Budapest Noclip 0.1.2]` appear in
 `Eltunt_Budapest3\Binaries\Win64\UE4SS.log`.
 
 This is a first experimental build. The submitted executable was statically
@@ -73,8 +73,18 @@ already contains those DLLs and requires no Python installation to use.
 
 ## Vehicle diagnostics
 
-Stand beside an enterable vehicle and press **F11** once. Send
+Stand beside an enterable vehicle and press **F3** once. Send
 `Eltunt_Budapest3\Binaries\Win64\UE4SS.log`. The diagnostic reads loaded
 vehicle/pawn class names and available health/controller fields; it does not
 repair or spawn anything yet. If upgrading, close the game and uninstall the
 previous trainer before installing this version.
+
+## God mode (0.1.2)
+
+**F4** toggles player god mode. Noclip automatically disables standard Unreal
+actor damage while flying and keeps protection until you have been grounded
+for 0.75 game seconds after switching flight off. Turning manual god mode off
+also retains this landing guard. Original damage permission is restored after
+protection ends, or when the player restarts. This uses `bCanBeDamaged`; custom
+Blueprint logic that directly changes health may require a game-specific fix.
+Vehicle spawning/repair still awaits an F3 diagnostic from an enterable car.
