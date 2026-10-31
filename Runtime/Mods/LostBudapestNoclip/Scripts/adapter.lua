@@ -36,14 +36,14 @@ local function down(controller, name)
 end
 
 function Adapter.log(message)
-    print("[Lost Budapest Noclip 0.1.3] " .. message .. "\n")
+    print("[Lost Budapest Noclip 0.2.0] " .. message .. "\n")
 end
 
 function Adapter.reset()
     cachedController, gameplay = nil, nil
 end
 
-function Adapter.resolve()
+function Adapter.playerContext()
     if not isLocal(cachedController) then
         cachedController = nil
         for _, controller in ipairs(FindAllOf("PlayerController") or {}) do
@@ -53,6 +53,15 @@ function Adapter.resolve()
     if not cachedController then return nil end
     local pawn = cachedController.Pawn
     if not valid(pawn) then return nil end
+    return {controller=cachedController,pawn=pawn}
+end
+
+function Adapter.gameplay() return statics() end
+
+function Adapter.resolve()
+    local player=Adapter.playerContext()
+    if not player then return nil end
+    local pawn=player.pawn
     -- A vehicle/spectator/menu pawn must not be treated as a walking character.
     local ok, movement = pcall(function() return pawn.CharacterMovement end)
     if not ok or not valid(movement) then return nil end
@@ -138,6 +147,14 @@ function Adapter.input(ctx)
         boost = down(pc, "LeftShift") or down(pc, "RightShift")}
 end
 
+function Adapter.damageContext()
+    local ctx=Adapter.playerContext()
+    if not ctx then return nil end
+    ctx.identity=identity(ctx.pawn)
+    local ok,movement=pcall(function() return ctx.pawn.CharacterMovement end)
+    if ok and valid(movement) then ctx.movement=movement end
+    return ctx
+end
 function Adapter.captureDamage(ctx)
     local ok, value = pcall(function() return ctx.pawn.bCanBeDamaged end)
     if not ok or type(value) ~= "boolean" then return nil end
@@ -151,6 +168,7 @@ function Adapter.restoreDamage(saved)
     end
 end
 function Adapter.grounded(ctx)
+    if not valid(ctx.movement) then return true end
     local mode=ctx.movement.MovementMode
     return mode==1 or mode==2 or mode==4
 end

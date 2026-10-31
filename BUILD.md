@@ -1,6 +1,6 @@
 # Source and validation
 
-The trainer source is the four Lua files under
+The trainer source is the seven Lua files under
 `Runtime/Mods/LostBudapestNoclip/Scripts/`. There is no compiled trainer logic.
 The only DLLs are unmodified files from official UE4SS 3.0.1, listed with hashes
 in `payload-manifest.json` and attributed in `THIRD-PARTY.md`.
@@ -25,7 +25,7 @@ Run `python tools/package.py` to verify the recorded source identities and
 dependency bytes, regenerate the payload manifest and create the release ZIP.
 The game EXE and research toolchains are excluded from releases.
 
-Current results: **104 Lua assertions and 34 installer assertions pass**.
+Current results: **178 Lua assertions and 55 installer assertions pass**.
 The actual runtime payload was also installed and removed in an isolated
 filesystem fixture, leaving the original game EXE unchanged. The loader proxy
 exports every DWM function imported by the supplied game EXE.

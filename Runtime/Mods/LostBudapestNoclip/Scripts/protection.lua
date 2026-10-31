@@ -24,7 +24,7 @@ end
 function Protection:tick(flying)
     if self.flight and not flying then self.landing=true end
     self.flight=flying
-    local ctx=self.api.resolve()
+    local ctx=self.api.damageContext and self.api.damageContext() or self.api.resolve()
     if self.saved and (not ctx or not self.api.same(ctx,self.saved)) then self:restore() end
     if not ctx then return end
     if self.manual or flying or self.landing then

@@ -9,6 +9,7 @@ PASS: emergency return teleports before restoring collision
 PASS: failed emergency return keeps noclip active until a successful retry
 PASS: failed restoration stays recoverable and cannot stack a second activation
 PASS: external engine ownership changes stop flight
+PASS: new vehicle keys are queued and failed diagnostics cannot drop active flight
 PASS: shipped UE4SS adapter and bindings use typed game-thread calls
 PASS: main scheduler recovers from queue failure and player restarts
 PASS: adapter rejects unknown input names and preserves later engine movement
@@ -18,4 +19,7 @@ PASS: destroyed movement cleanup verifies the original pawn identity first
 PASS: non-finite engine data stops before unsafe movement
 PASS: packaged startup settings disable unsafe script hot reload
 PASS: god mode and post-flight landing guard preserve original damage permission
-RESULT: 117 assertions; 0 failures.
+PASS: vehicle spawning uses real catalog classes, rejects blocked spawns and cleans failures
+PASS: trainer driving validates entry, rolls back failure and restores on exit
+PASS: native vehicle adapter uses typed deferred spawn, health guard and reversible possession
+RESULT: 178 assertions; 0 failures.

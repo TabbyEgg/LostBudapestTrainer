@@ -1,6 +1,6 @@
 # Lost Budapest Noclip installer. Windows PowerShell 5.1 or newer.
 [CmdletBinding()]
-param([string]$GameDirectory)
+param([string]$GameDirectory, [switch]$Update)
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2.0
@@ -123,8 +123,24 @@ try {
         throw 'This package targets the supplied demo build. Its EXE hash differs; no files were changed.'
     }
     $receiptPath = Resolve-Child $target $ReceiptName
+    $prior = $null; $priorFiles = @{}
     if (Test-Path -LiteralPath $receiptPath) {
-        throw 'An installation receipt already exists. Run Uninstall.cmd first before installing this package again.'
+        if (-not $Update) { throw 'An installation receipt already exists. Run Update.cmd to upgrade this installation.' }
+        if ((Get-Item -LiteralPath $receiptPath).Length -gt 1048576) { throw 'Installation receipt is oversized.' }
+        $prior = Get-Content -LiteralPath $receiptPath -Raw | ConvertFrom-Json
+        if ($prior.format -ne 1 -or $prior.product -ne $Product -or $prior.gameExe -ne $ExpectedExe -or
+            $prior.backupDirectory -notmatch '^LostBudapestNoclip\.backup-[a-fA-F0-9]{32}$') { throw 'Invalid installation receipt.' }
+        foreach ($record in @($prior.files)) {
+            $null = Resolve-Child $target ([string]$record.path)
+            if (-not (Test-AllowedTarget $record.path) -or $priorFiles.ContainsKey($record.path) -or
+                $record.installedSha256 -notmatch '^[a-fA-F0-9]{64}$') { throw 'Invalid file entry in installation receipt.' }
+            if ($record.beforeExisted) {
+                if ($record.backupPath -ne ($prior.backupDirectory + '/' + $record.path) -or $record.beforeSha256 -notmatch '^[a-fA-F0-9]{64}$') { throw 'Invalid backup entry.' }
+                $backup = Resolve-Child $target $record.backupPath
+                if (-not [IO.File]::Exists($backup) -or (Get-Sha256 $backup) -ine $record.beforeSha256) { throw 'Original backup is missing or changed; update stopped.' }
+            }
+            $priorFiles[$record.path] = $record
+        }
     }
     $runtime = [IO.Path]::Combine($PSScriptRoot, 'Runtime')
     $manifestPath = [IO.Path]::Combine($PSScriptRoot, 'payload-manifest.json')
@@ -144,7 +160,9 @@ try {
     }
     foreach ($required in @('UE4SS.dll', 'dwmapi.dll', 'UE4SS-settings.ini',
         'Mods/LostBudapestNoclip/Scripts/main.lua', 'Mods/LostBudapestNoclip/Scripts/controller.lua',
-        'Mods/LostBudapestNoclip/Scripts/adapter.lua', 'Mods/LostBudapestNoclip/Scripts/config.lua')) {
+        'Mods/LostBudapestNoclip/Scripts/adapter.lua', 'Mods/LostBudapestNoclip/Scripts/config.lua',
+        'Mods/LostBudapestNoclip/Scripts/protection.lua', 'Mods/LostBudapestNoclip/Scripts/vehicles.lua',
+        'Mods/LostBudapestNoclip/Scripts/vehicle_engine.lua')) {
         if (-not $payload.ContainsKey($required)) { throw "Required payload file is missing: $required" }
     }
     foreach ($file in @(Get-ChildItem -LiteralPath $runtime -File -Recurse -Force)) {
@@ -172,15 +190,28 @@ try {
     $modsPath = Resolve-Child $target 'Mods/mods.txt'
     $mods = if ([IO.File]::Exists($modsPath)) { [IO.File]::ReadAllText($modsPath) } else { '' }
     $payload['Mods/mods.txt'] = $Utf8.GetBytes((Merge-ModEntry $mods))
-    $backupRelative = 'LostBudapestNoclip.backup-' + [Guid]::NewGuid().ToString('N')
+    $backupRelative = if ($prior) { $prior.backupDirectory } else { 'LostBudapestNoclip.backup-' + [Guid]::NewGuid().ToString('N') }
+    # Preserve edited trainer configuration, without claiming ownership of edits.
+    $configRelative = 'Mods/LostBudapestNoclip/Scripts/config.lua'
+    if ($priorFiles.ContainsKey($configRelative)) {
+        $configPath = Resolve-Child $target $configRelative
+        if ([IO.File]::Exists($configPath) -and (Get-Sha256 $configPath) -ne $priorFiles[$configRelative].installedSha256) {
+            $payload[$configRelative] = [IO.File]::ReadAllBytes($configPath)
+            Write-Host 'Preserved your edited trainer configuration.'
+        }
+    }
     $plans = New-Object 'System.Collections.Generic.List[object]'
     foreach ($relative in @($payload.Keys | Sort-Object)) {
         $path = Resolve-Child $target $relative
         $bytes = [byte[]]$payload[$relative]; $newHash = Get-BytesSha256 $bytes
         $exists = [IO.File]::Exists($path); $oldHash = if ($exists) { Get-Sha256 $path } else { $null }
         if ($exists -and $oldHash -eq $newHash) { continue }
-        if ($exists -and ($relative -in @('dwmapi.dll', 'UE4SS.dll') -or $relative.StartsWith('Mods/shared/', [StringComparison]::OrdinalIgnoreCase))) {
+        if ($exists -and ($relative -in @('dwmapi.dll', 'UE4SS.dll') -or $relative.StartsWith('Mods/shared/', [StringComparison]::OrdinalIgnoreCase)) -and
+            -not ($priorFiles.ContainsKey($relative) -and $oldHash -eq $priorFiles[$relative].installedSha256)) {
             throw "A different loader/shared file already exists: $relative. No files were changed; keep your existing loader installation separate."
+        }
+        if ($priorFiles.ContainsKey($relative) -and $exists -and $oldHash -ne $priorFiles[$relative].installedSha256) {
+            throw "An installed file was edited: $relative. Update stopped without overwriting it."
         }
         $backup = if ($exists) { $backupRelative + '/' + $relative } else { $null }
         $plans.Add([pscustomobject]@{ path = $relative; beforeExisted = $exists; beforeSha256 = $oldHash; backupPath = $backup; installedSha256 = $newHash })
@@ -204,16 +235,33 @@ try {
             }
             if ($plan.beforeExisted) {
                 if ((Get-Sha256 $path) -ne $plan.beforeSha256) { throw "File changed during installation: $($plan.path)" }
-                $backup = Resolve-Child $target $plan.backupPath
-                [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($backup)) | Out-Null
-                [IO.File]::Copy($path, $backup, $false)
+                $plan | Add-Member -NotePropertyName rollbackBytes -NotePropertyValue ([IO.File]::ReadAllBytes($path))
+                if (-not $priorFiles.ContainsKey($plan.path)) {
+                    $backup = Resolve-Child $target $plan.backupPath
+                    [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($backup)) | Out-Null
+                    if ([IO.File]::Exists($backup)) {
+                        if ((Get-Sha256 $backup) -ne $plan.beforeSha256) { throw 'An existing backup differs; update stopped.' }
+                    } else { [IO.File]::Copy($path, $backup, $false) }
+                }
             }
             $written.Add($plan)
             Write-BytesAtomic $path ([byte[]]$payload[$plan.path])
         }
+        $finalFiles = @{}
+        foreach ($key in $priorFiles.Keys) { $finalFiles[$key] = $priorFiles[$key] }
+        foreach ($plan in $plans) {
+            if ($priorFiles.ContainsKey($plan.path)) {
+                $old = $priorFiles[$plan.path]
+                $finalFiles[$plan.path] = [pscustomobject]@{path=$plan.path;beforeExisted=$old.beforeExisted;beforeSha256=$old.beforeSha256;backupPath=$old.backupPath;installedSha256=$plan.installedSha256}
+            } else {
+                $finalFiles[$plan.path] = [pscustomobject]@{path=$plan.path;beforeExisted=$plan.beforeExisted;beforeSha256=$plan.beforeSha256;backupPath=$plan.backupPath;installedSha256=$plan.installedSha256}
+            }
+        }
+        $allCreated = @($created.ToArray())
+        if ($prior) { $allCreated = @(@($prior.createdDirectories) + $allCreated | Select-Object -Unique) }
         $receipt = [ordered]@{ format = 1; product = $Product; gameExe = $ExpectedExe; gameSha256 = $ExpectedGameSha256;
             installedAtUtc = [DateTime]::UtcNow.ToString('o'); backupDirectory = $backupRelative;
-            files = @($plans.ToArray()); createdDirectories = @($created.ToArray()) }
+            files = @($finalFiles.Values); createdDirectories = $allCreated }
         Write-BytesAtomic $receiptPath ($Utf8.GetBytes(($receipt | ConvertTo-Json -Depth 6)))
     } catch {
         $installError = $_
@@ -221,7 +269,7 @@ try {
             $plan = $written[$i]; $path = Resolve-Child $target $plan.path
             try {
                 if ([IO.File]::Exists($path) -and (Get-Sha256 $path) -eq $plan.installedSha256) {
-                    if ($plan.beforeExisted) { [IO.File]::Copy((Resolve-Child $target $plan.backupPath), $path, $true) }
+                    if ($plan.beforeExisted) { Write-BytesAtomic $path ([byte[]]$plan.rollbackBytes) }
                     else { [IO.File]::Delete($path) }
                 }
             } catch { Write-Warning "Rollback needs manual attention for $($plan.path): $($_.Exception.Message)" }
@@ -232,7 +280,7 @@ try {
         }
         throw $installError
     }
-    Write-Host 'Lost Budapest Noclip installed. Start the game normally; F6 toggles noclip.' -ForegroundColor Green
+    Write-Host 'Lost Budapest Noclip installed/updated. Start the game normally; F6 toggles noclip.' -ForegroundColor Green
     Write-Host "Receipt and original-file backups are in: $target"
     exit 0
 } catch {

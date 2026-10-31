@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "log_sha256": "cd98db0c89ba82dea5c3c812cf614c69c4e49af85e1f09066adc375e95275b94",
+  "scope": "Only class identities are recorded; original user log and game EXE are not redistributed.",
+  "player_car": "/Game/Autok/Abel_Car.Abel_Car_C",
+  "traffic_classes": [
+    "/Game/Traffic_AI_System/Cars/Estate/BP_Estate.BP_Estate_C",
+    "/Game/Traffic_AI_System/Cars/Hatch/BP_Hatch.BP_Hatch_C",
+    "/Game/Traffic_AI_System/Cars/Liftback/BP_Liftback.BP_Liftback_C",
+    "/Game/Traffic_AI_System/Cars/Luxury/BP_Luxury.BP_Luxury_C",
+    "/Game/Traffic_AI_System/Cars/Van/BP_Van_1.BP_Van_1_C",
+    "/Game/Traffic_AI_System/Cars/Van/BP_Van_2.BP_Van_2_C"
+  ],
+  "api_sources": [
+    "https://github.com/UE4SS-RE/RE-UE4SS/blob/v3.0.1/docs/lua-api/classes/ustruct.md",
+    "https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Engine/Kismet/UGameplayStatics/BeginDeferredActorSpawnFromClass",
+    "https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Engine/GameFramework/AController/Possess"
+  ],
+  "game_runtime_tested": false,
+  "normal_entry_for_traffic_verified": false,
+  "repair_limit": "Only verified zero-input repair functions or recognized health/max-health numeric pairs; otherwise recovery only."
+}

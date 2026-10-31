@@ -45,3 +45,12 @@ other-mod preservation, payload/build/collision/path rejection, edited-file
 retention, partial-write rollback and interrupted-removal recovery. The fixture
 uses the supplied EXE for its real SHA-256 check, with synthetic loader bytes; it
 does not execute the game or loader. PowerShell syntax parsing also passes.
+
+## Updating
+
+Update.cmd runs update.ps1, downloads the latest release from the official repo,
+verifies GitHub asset SHA256/size and bounded archive paths, then invokes
+install.ps1 -Update. The installer migrates receipt ownership without replacing
+original backups. Edited config.lua is preserved; other edited implementation
+files stop the upgrade before writes. Uninstall after upgrading restores the
+pre-first-install backup. Failed upgrade writes roll back to the prior version.

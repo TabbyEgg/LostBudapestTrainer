@@ -279,8 +279,8 @@ local function engine()
     function f.statics:GetTimeSeconds(context)guard('GetTimeSeconds');assert(context==f.pawn,'world context must be pawn');return f.clock end
     function f.statics:IsGamePaused(context)guard('IsGamePaused');assert(context==f.pawn,'pause requires world context');return f.paused or false end
     function f.load()
-        package.loaded.adapter=nil
-        Key={F6=117,F7=118,F8=119,F10=121};EFindName={FNAME_Find=0}
+        package.loaded.adapter=nil;package.loaded.vehicle_engine=nil
+        Key={F1=112,F2=113,F3=114,F4=115,F5=116,F6=117,F7=118,F8=119,F9=120,F10=121};EFindName={FNAME_Find=0}
         FindAllOf=function(name)guard('FindAllOf');assert(name=='PlayerController');return f.controllers or {f.pc} end
         StaticFindObject=function(path)guard('StaticFindObject');assert(path=='/Script/Engine.Default__GameplayStatics');return f.statics end
         FName=function(name,mode)
@@ -311,6 +311,19 @@ local function engine()
     function f.finish()print=f.originalPrint end
     return f
 end
+
+case('new vehicle keys are queued and failed diagnostics cannot drop active flight',function()
+    local f=engine();f.load()
+    check(f.registry[Key.F1] and f.registry[Key.F2] and f.registry[Key.F5] and f.registry[Key.F9],'repair, select, driving and spawn keys registered')
+    check(f.registry[Key.F3] and f.registry[Key.F4],'diagnostic and god-mode keys registered')
+    f.press('F6');f.step(0)
+    f.press('F5');f.step(0.01);check(not f.pawn.collision,'driving request cannot capture an active noclip pawn')
+    f.press('F3');f.step(0.01);check(not f.pawn.collision,'diagnostic read failure leaves flight active')
+    f.press('F2');f.step(0.01);check(not f.pawn.collision,'vehicle selection does not mutate player physics')
+    f.pawn.bCanBeDamaged=true;f.press('F4');f.step(0.01);check(f.pawn.bCanBeDamaged==false,'god mode key disables the actual player damage property')
+    f.inGame=true;f.restart();f.inGame=false;f.step(0.01);check(f.pawn.bCanBeDamaged==false,'manual god mode remains requested across player restarts and vehicle possession')
+    f.finish()
+end)
 
 case('shipped UE4SS adapter and bindings use typed game-thread calls',function()
     local f=engine();f.load()
@@ -439,5 +452,7 @@ case('god mode and post-flight landing guard preserve original damage permission
     check(not current.damage,'manual god applies to new controlled character')
     p:reset();check(current.damage and not p:hasWork(),'restart restores original permission and disables god mode')
 end)
+
+dofile(TRAINER_ROOT..'/tests/vehicle_regressions.lua')(check,case)
 
 TEST_PRINT(string.format('RESULT: %d assertions; %d failures.',TEST_ASSERTIONS,TEST_FAILURES))

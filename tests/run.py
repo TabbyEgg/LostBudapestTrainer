@@ -35,7 +35,7 @@ summary = {
     },
     'harness_sha256': {
         p.name: hashlib.sha256(p.read_bytes()).hexdigest()
-        for p in (HERE / 'run.py', HERE / 'regressions.lua')
+        for p in [HERE/'run.py', *sorted(HERE.glob('*.lua'))]
     },
     'game_runtime_tested': False,
     'ue4ss_native_loader_executed': False,
