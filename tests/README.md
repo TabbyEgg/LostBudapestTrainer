@@ -1,0 +1,35 @@
+# Lua behavior checks
+
+Install `requirements.txt` into a Python virtual environment, then run
+`python tests/run.py` from the project directory. Lupa executes the Lua 5.4
+production modules; no replacement copy of trainer logic is used.
+
+The checks run the controller against fault-injecting game-boundary doubles,
+then run the shipped `main.lua` and `adapter.lua` together with typed Unreal and
+UE4SS doubles. They verify camera-relative normalized movement, pause handling,
+timing limits, speed changes, original-state restoration, partial failures,
+ownership and possession changes, emergency-return ordering, bounded cleanup
+retries and missing engine inputs. Integration cases reject Unreal access outside
+the queued game-thread callback, validate FKey/FName/transform argument shapes,
+and ensure async updates coalesce and do not reactivate after a player restart.
+Emergency-return cases distinguish a genuinely refused teleport from Unreal's
+false/no-movement result when already at the entry point. A failed return retains
+noclip until a successful retry; destroyed-component cleanup checks the old pawn
+identity before touching collision on any still-valid object.
+
+This establishes Lua behavior under those modeled contracts. It does not load
+UE4SS DLLs, run the Windows executable or establish real in-game compatibility.
+`results.json` records the tested production-source hashes and explicit runtime
+limits; `results.txt` records individual case outcomes.
+
+Installer fixtures run the actual PowerShell scripts against isolated directories
+with synthetic loader payloads and a hardlink to the approved EXE (never executed):
+
+```text
+python tests/installer-checks.py --powershell /path/to/pwsh --game-exe /path/to/EltuntBP-Win64-Shipping.exe
+```
+
+The temporary root must be on the EXE's filesystem to allow hardlinks. Use
+`--temp-root` for another writable directory on that filesystem. Existing
+validation evidence was produced under PowerShell 7 on Linux; Windows folder
+selection and Windows PowerShell 5.1 still require a platform check.

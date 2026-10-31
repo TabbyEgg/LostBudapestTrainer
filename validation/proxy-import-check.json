@@ -1,0 +1,11 @@
+{
+  "game_dwmapi_imports": [
+    "DwmIsCompositionEnabled",
+    "DwmFlush",
+    "DwmSetWindowAttribute",
+    "DwmGetCompositionTimingInfo"
+  ],
+  "proxy_export_count": 143,
+  "missing": [],
+  "game_runtime_executed": false
+}

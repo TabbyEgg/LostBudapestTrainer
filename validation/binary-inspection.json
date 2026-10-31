@@ -1,0 +1,147 @@
+{
+  "input": {
+    "uploaded_filename": "EltuntBP-Win64-Shipping.exe",
+    "path": "/workspace/lost-budapest-research/EltuntBP-Win64-Shipping.exe",
+    "bytes": 86158848,
+    "sha256": "2e5f4d5b66da873a488287b580c2ba3dd91ed892727cfd71ecbd610d6a08f284"
+  },
+  "analysis_mode": "Static bytes and PE metadata only; executable never run or modified.",
+  "pe": {
+    "format": "PE32+",
+    "machine": "AMD64",
+    "sections": 9,
+    "timestamp_utc": "2026-10-14T18:47:18+00:00",
+    "preferred_image_base": "0x140000000",
+    "aslr": true,
+    "imports": [
+      "X3DAudio1_7.dll",
+      "XAPOFX1_5.dll",
+      "dxgi.dll",
+      "d3d9.dll",
+      "d3d11.dll",
+      "D3DCOMPILER_43.dll",
+      "DSOUND.dll",
+      "XINPUT1_3.dll",
+      "ADVAPI32.dll",
+      "USER32.dll",
+      "GDI32.dll",
+      "WS2_32.dll",
+      "CRYPT32.dll",
+      "WLDAP32.dll",
+      "Normaliz.dll",
+      "WINMM.dll",
+      "KERNEL32.dll",
+      "SHELL32.dll",
+      "ole32.dll",
+      "OLEAUT32.dll",
+      "IPHLPAPI.DLL",
+      "SETUPAPI.dll",
+      "dwmapi.dll",
+      "IMM32.dll",
+      "UIAutomationCore.DLL",
+      "OPENGL32.dll",
+      "WINHTTP.dll",
+      "MSVCP140.dll",
+      "bcrypt.dll",
+      "VCRUNTIME140.dll",
+      "api-ms-win-crt-runtime-l1-1-0.dll",
+      "api-ms-win-crt-utility-l1-1-0.dll",
+      "api-ms-win-crt-stdio-l1-1-0.dll",
+      "api-ms-win-crt-string-l1-1-0.dll",
+      "api-ms-win-crt-convert-l1-1-0.dll",
+      "api-ms-win-crt-math-l1-1-0.dll",
+      "api-ms-win-crt-heap-l1-1-0.dll",
+      "api-ms-win-crt-filesystem-l1-1-0.dll",
+      "api-ms-win-crt-time-l1-1-0.dll",
+      "api-ms-win-crt-environment-l1-1-0.dll",
+      "api-ms-win-crt-conio-l1-1-0.dll",
+      "api-ms-win-crt-locale-l1-1-0.dll"
+    ]
+  },
+  "version": {
+    "resource_file_version": "4.27.2.0",
+    "resource_product_version": "4.27.2.0",
+    "product_version_string": "++UE4+Release-4.27-CL-18319896",
+    "project_module": "EltuntBP",
+    "project_name": "Eltunt_Budapest3",
+    "configuration": "Shipping"
+  },
+  "reflection_literal_evidence": {
+    "SetActorEnableCollision": {
+      "ascii_literal_present": true,
+      "utf16_literal_present": false
+    },
+    "GetActorEnableCollision": {
+      "ascii_literal_present": true,
+      "utf16_literal_present": false
+    },
+    "CharacterMovementComponent": {
+      "ascii_literal_present": true,
+      "utf16_literal_present": true
+    },
+    "SetMovementMode": {
+      "ascii_literal_present": true,
+      "utf16_literal_present": false
+    },
+    "MaxFlySpeed": {
+      "ascii_literal_present": true,
+      "utf16_literal_present": true
+    },
+    "Ghost": {
+      "ascii_literal_present": true,
+      "utf16_literal_present": true
+    },
+    "Walk": {
+      "ascii_literal_present": true,
+      "utf16_literal_present": true
+    },
+    "GetControlRotation": {
+      "ascii_literal_present": true,
+      "utf16_literal_present": true
+    },
+    "GetMovementComponent": {
+      "ascii_literal_present": true,
+      "utf16_literal_present": false
+    },
+    "IsInputKeyDown": {
+      "ascii_literal_present": true,
+      "utf16_literal_present": false
+    },
+    "CheatManager": {
+      "ascii_literal_present": true,
+      "utf16_literal_present": true
+    },
+    "PlayerController": {
+      "ascii_literal_present": true,
+      "utf16_literal_present": true
+    },
+    "K2_GetActorLocation": {
+      "ascii_literal_present": true,
+      "utf16_literal_present": false
+    },
+    "K2_SetActorLocation": {
+      "ascii_literal_present": true,
+      "utf16_literal_present": true
+    }
+  },
+  "anti_cheat_marker_search": {
+    "markers_found": {
+      "EasyAntiCheat": false,
+      "BattlEye": false,
+      "EACLauncher": false,
+      "EOSAntiCheat": false
+    },
+    "interpretation": "No listed markers found; this is not proof that the complete game installation has no protections."
+  },
+  "ue4ss_assessment": {
+    "engine_version_in_official_target_range": true,
+    "official_readme": "https://github.com/UE4SS-RE/RE-UE4SS/blob/main/README.md",
+    "proxy_import_candidate": "dwmapi.dll",
+    "function_name_pool_addresses_verified": false,
+    "layout_or_aob_compatibility_runtime_verified": false,
+    "hardcoded_trainer_offsets_proposed": false,
+    "game_specific_cooked_blueprint_assets_available": false,
+    "limits": "Reflection strings indicate engine APIs exist in the binary, not that any Lua call has been tested. Ghost/CheatManager may require game setup or shipping-configuration permissions. Prefer direct reflected movement/collision APIs with explicit object checks."
+  },
+  "game_runtime_tested": false
+}

@@ -1,0 +1,13 @@
+# The downloadable trainer includes these official dependencies. Source checkouts
+# fetch the pinned release with tools/fetch_loader.py instead of tracking DLLs.
+/Runtime/UE4SS.dll
+/Runtime/dwmapi.dll
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.exe
+*.pdb
+UE4SS.log
+LostBudapestNoclip.install.json
+LostBudapestNoclip.backup-*/

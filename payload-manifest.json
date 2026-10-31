@@ -1,0 +1,40 @@
+{
+  "format": 1,
+  "files": [
+    {
+      "path": "Mods/LostBudapestNoclip/Scripts/adapter.lua",
+      "size": 5547,
+      "sha256": "f653b85dfd1a6ea8c32c531be7c477272fff63b357a2e2b836a435d7fec39738"
+    },
+    {
+      "path": "Mods/LostBudapestNoclip/Scripts/config.lua",
+      "size": 241,
+      "sha256": "b72cf94f5295156719aeb296c167d50383a017fb24d6485bc48175c7f73447df"
+    },
+    {
+      "path": "Mods/LostBudapestNoclip/Scripts/controller.lua",
+      "size": 7997,
+      "sha256": "15f19f82eedae42916a788c541e0e6e5d50cf31fed403e8622a03d8333314871"
+    },
+    {
+      "path": "Mods/LostBudapestNoclip/Scripts/main.lua",
+      "size": 2459,
+      "sha256": "9e39970f18ed35ae78ad7e986af730fa896bc9420456b2140d734aaa0dcb182e"
+    },
+    {
+      "path": "UE4SS-settings.ini",
+      "size": 5041,
+      "sha256": "af7153fffc09fdbbee6a544b54069af53c0645badf9a1b06016960977e58d62f"
+    },
+    {
+      "path": "UE4SS.dll",
+      "size": 16263680,
+      "sha256": "8ac18fbffc1ef96b0662d4a2d537b3f224c26d65caaba7989a9404c566102b26"
+    },
+    {
+      "path": "dwmapi.dll",
+      "size": 58368,
+      "sha256": "ce596412befa68c30b7f88f65beb77d9bdad55e9b96a276a5a9cf690c63f24bb"
+    }
+  ]
+}

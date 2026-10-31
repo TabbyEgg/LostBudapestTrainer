@@ -1,0 +1,12 @@
+{
+  "version": "0.1.0",
+  "size": 5521207,
+  "sha256": "0d3cb33b0b243b3301f086beb084df1f7f8b8c28d6fc65d7654de3646f3f815b",
+  "entries": 35,
+  "lua_assertions": 104,
+  "installer_assertions": 34,
+  "actual_payload_install_uninstall_verified": true,
+  "archive_crc_and_entry_bytes_verified": true,
+  "game_runtime_tested": false,
+  "filename": "LostBudapest-Noclip-0.1.0.zip"
+}

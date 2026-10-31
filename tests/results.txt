@@ -1,0 +1,20 @@
+PASS: inactive state and unsupported contexts never alter physics
+PASS: activation and exact restoration preserve original state
+PASS: activation rollback and movement failures restore owned state
+PASS: camera-space movement, opposite keys and diagonal speed
+PASS: pause, blocked input, negative clock and frame stalls cannot teleport
+PASS: speed adjustment bounds and temporary boost
+PASS: possession and map-context changes restore only the old pawn
+PASS: emergency return teleports before restoring collision
+PASS: failed emergency return keeps noclip active until a successful retry
+PASS: failed restoration stays recoverable and cannot stack a second activation
+PASS: external engine ownership changes stop flight
+PASS: shipped UE4SS adapter and bindings use typed game-thread calls
+PASS: main scheduler recovers from queue failure and player restarts
+PASS: adapter rejects unknown input names and preserves later engine movement
+PASS: adapter selects a local character and rejects unavailable actors
+PASS: native no-motion return and refused return are distinguished
+PASS: destroyed movement cleanup verifies the original pawn identity first
+PASS: non-finite engine data stops before unsafe movement
+PASS: packaged startup settings disable unsafe script hot reload
+RESULT: 104 assertions; 0 failures.

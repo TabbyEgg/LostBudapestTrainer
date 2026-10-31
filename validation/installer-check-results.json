@@ -1,0 +1,150 @@
+{
+  "powershell_version": "7.6.9",
+  "host": "Linux; Windows paths/folder picker/game runtime not executed",
+  "assertions": 34,
+  "failures": 0,
+  "checks": [
+    {
+      "name": "fresh installation completes: Lost Budapest Noclip installed. Start the game normally; F6 toggles noclip.\nReceipt and original-file backups are in: /workspace/lost-budapest-research/lbn-install-tests-bviy4csb/fresh/game/Eltunt_Budapest3/Binaries/Win64\n",
+      "pass": true
+    },
+    {
+      "name": "fresh proxy bytes match approved payload",
+      "pass": true
+    },
+    {
+      "name": "fresh mod entry enabled",
+      "pass": true
+    },
+    {
+      "name": "fresh required INI settings applied",
+      "pass": true
+    },
+    {
+      "name": "fresh receipt lists exactly seven payloads plus merged mod list",
+      "pass": true
+    },
+    {
+      "name": "second install refuses original backup chain overwrite",
+      "pass": true
+    },
+    {
+      "name": "fresh uninstall completes: Lost Budapest Noclip uninstalled. Pre-existing unchanged files were restored; other mods were preserved.\n",
+      "pass": true
+    },
+    {
+      "name": "fresh uninstall removes only newly installed content and receipt",
+      "pass": true
+    },
+    {
+      "name": "Win64 direct install with existing loader/config completes: Lost Budapest Noclip installed. Start the game normally; F6 toggles noclip.\nReceipt and original-file backups are in: /workspace/lost-budapest-research/lbn-install-tests-bviy4csb/existing/game/Eltunt_Budapest3/Binaries/Win64\n",
+      "pass": true
+    },
+    {
+      "name": "existing unrelated settings and console preference preserved",
+      "pass": true
+    },
+    {
+      "name": "mod entry merge preserves other enabled/disabled mods",
+      "pass": true
+    },
+    {
+      "name": "identical pre-existing loader is not claimed",
+      "pass": true
+    },
+    {
+      "name": "existing install uninstall completes: Kept shared loader/configuration for other mods: dwmapi.dll\nLost Budapest Noclip uninstalled. Pre-existing unchanged files were restored; other mods were preserved.\n",
+      "pass": true
+    },
+    {
+      "name": "uninstall restores original configuration bytes exactly",
+      "pass": true
+    },
+    {
+      "name": "uninstall leaves pre-existing loader and unrelated mod untouched",
+      "pass": true
+    },
+    {
+      "name": "different existing proxy rejected before any game modification",
+      "pass": true
+    },
+    {
+      "name": "different game hash rejected before writes",
+      "pass": true
+    },
+    {
+      "name": "tampered payload rejected before writes",
+      "pass": true
+    },
+    {
+      "name": "unmanifested payload rejected before writes",
+      "pass": true
+    },
+    {
+      "name": "payload path traversal rejected before writes",
+      "pass": true
+    },
+    {
+      "name": "duplicate manifest entries rejected before writes",
+      "pass": true
+    },
+    {
+      "name": "edit preservation fixture installs",
+      "pass": true
+    },
+    {
+      "name": "edited trainer file retained with partial uninstall receipt",
+      "pass": true
+    },
+    {
+      "name": "partial uninstall still removes unchanged owned loader",
+      "pass": true
+    },
+    {
+      "name": "edited mod list fixture installs",
+      "pass": true
+    },
+    {
+      "name": "post-install mod list edits are preserved",
+      "pass": true
+    },
+    {
+      "name": "bad receipt fixture installs",
+      "pass": true
+    },
+    {
+      "name": "uninstall traversal rejected before removing any file",
+      "pass": true
+    },
+    {
+      "name": "partial failure rolls proxy back and preserves original obstructing file",
+      "pass": true
+    },
+    {
+      "name": "custom external mod path rejected without modifications",
+      "pass": true
+    },
+    {
+      "name": "shared loader fixture installs",
+      "pass": true
+    },
+    {
+      "name": "new other mod keeps shared loader/configuration on uninstall",
+      "pass": true
+    },
+    {
+      "name": "interrupted restore fixture installs",
+      "pass": true
+    },
+    {
+      "name": "uninstall recognizes already-restored original bytes and finishes safely",
+      "pass": true
+    }
+  ],
+  "source_sha256": {
+    "install.ps1": "03cce62e325cb92f2ad7a39036062c8ec4cb9e876dd3a07f3c54d6abeada8425",
+    "uninstall.ps1": "d0bf32ae46c63b2bd7ea37936d4a1af6f5d669b6faab98ba96e8dd4a1b69b682",
+    "Install.cmd": "a5b257cf493b255fc78183b3654cec51ab7a038d94f82befc52134d45345a8de",
+    "Uninstall.cmd": "b241e0c54ce8c9500b55b1d11c3d98d5e90fecd9b93dd55caf0a7e3e270f559d"
+  }
+}

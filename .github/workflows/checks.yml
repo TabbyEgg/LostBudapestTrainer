@@ -1,0 +1,25 @@
+name: Trainer checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Restore pinned official loader
+        run: python tools/fetch_loader.py
+      - name: Verify downloadable ZIP
+        run: python tools/verify_release.py
+      - name: Install Lua test dependency
+        run: python -m pip install -r tests/requirements.txt
+      - name: Run Lua behavior checks
+        run: python tests/run.py
+      - name: Validate source identities and rebuild package
+        run: python tools/package.py
