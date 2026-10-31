@@ -21,5 +21,10 @@ PASS: packaged startup settings disable unsafe script hot reload
 PASS: god mode and post-flight landing guard preserve original damage permission
 PASS: vehicle spawning uses real catalog classes, rejects blocked spawns and cleans failures
 PASS: trainer driving validates entry, rolls back failure and restores on exit
-PASS: native vehicle adapter uses typed deferred spawn, health guard and reversible possession
-RESULT: 178 assertions; 0 failures.
+PASS: native vehicle adapter uses native spawn helper, health guard and reversible possession
+PASS: menu opens only with a playable context and a working local HUD
+PASS: menu mouse and keyboard edges dispatch one action and release locks first
+PASS: menu errors restore input and messages remain read-only notifications
+PASS: native menu adapter uses named output parameters and balances input locks
+PASS: stable-loader native spawn avoids FTransform marshaling and restores all temporary state
+RESULT: 211 assertions; 0 failures.

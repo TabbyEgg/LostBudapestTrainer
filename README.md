@@ -1,4 +1,4 @@
-# Lost Budapest Trainer 0.2.0
+# Lost Budapest Trainer 0.3.0
 
 [**Download the latest ZIP from Releases**](https://github.com/TabbyEgg/LostBudapestTrainer/releases/latest)
 
@@ -27,10 +27,28 @@ package upgrade, use `install.ps1 -Update -GameDirectory 'your game folder'`.
 **Uninstall.cmd** removes/restores files recorded in the receipt. Edited files
 are retained for review. Keep the receipt and backup folder in the game folder.
 
+## Menu
+
+Press **Insert** in a loaded game to open or close the trainer menu. Click a row,
+or use **Up/Down** to select, **Left/Right** for speed/model, **Enter** to activate,
+and **Backspace** to close. Speed and model selection stay open; spawning, entry,
+repair and noclip actions close the menu before restoring gameplay controls and
+executing. Flight, god mode/landing protection, speed and driving status are live.
+Recent trainer messages, including spawn errors, appear on the HUD.
+
+The menu uses the game's Blueprint HUD canvas, including a fallback for compiled
+HUD event graphs. It never replaces your HUD or changes game assets. If the HUD
+is unavailable it closes automatically and leaves hotkeys active. Menu drawing
+and the revised vehicle spawn path still need in-game verification on this build.
+
+The default binding is `MenuKey = "INSERT"` in `config.lua`; an older preserved
+configuration uses Insert automatically.
+
 ## Controls
 
 | Key | Action |
 | --- | --- |
+| Insert | Open/close trainer menu |
 | F1 | Recover/repair occupied or nearby supported vehicle |
 | F2 | Cycle selected spawn model; selected name appears in UE4SS.log |
 | F3 | Read vehicle diagnostics into UE4SS.log |
@@ -51,7 +69,12 @@ Custom Blueprint health changes may bypass this flag.
 Spawn selection: **Abel's car** (default), estate, hatchback, liftback, luxury,
 van 1 and van 2. These are actual classes recorded in the provided game log.
 Only already-loaded blueprints are used; there is a limit of five live trainer
-spawns. Spawn in a clear area; the game may reject an obstructed position.
+spawns. Spawn in a clear area; the game may reject an obstructed position. Version 0.3.0
+uses Unreal's native Summon function to avoid the stable loader's nested
+FTransform serialization problem. The temporary spawn helper, class spawn
+settings and player collision state are restored immediately after each call;
+the engine builds the spawn transform itself. Failed spawns include the stage
+and traceback in the log.
 
 Try the game's normal enter-vehicle interaction for Abel's car. Traffic cars
 may lack normal player-entry logic. **F5 provides separate trainer driving**:
@@ -80,8 +103,9 @@ Trainer messages are in `Eltunt_Budapest3\Binaries\Win64\UE4SS.log`.
 F3 now includes nearby vehicle repair/entry function names and relevant property
 names. Send that log if repair or entry is unsupported.
 
-Flight and speed controls were confirmed working by the user on an earlier
-build. New vehicle features and god mode still require in-game verification;
+Flight and speed controls were confirmed working by the user. The user reported
+vehicle spawning failing in 0.2.0; this release replaces that native call path.
+The fix, menu, vehicle features and god mode still require in-game verification;
 automated Lua tests use simulated game objects. Installer/update fixtures run
 PowerShell on Linux; Windows folder selection remains untested here.
 

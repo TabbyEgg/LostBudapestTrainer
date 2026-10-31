@@ -44,8 +44,8 @@ function Vehicles:tick()
         self:drive()
     end
 end
-function Vehicles:cycle()
-    self.selected=self.selected % #self.catalog+1
+function Vehicles:cycle(direction)
+    self.selected=(self.selected-1+(direction or 1)) % #self.catalog+1
     self.api.log("Selected vehicle: "..self.catalog[self.selected].name..". F9 spawns; F2 selects next.")
 end
 function Vehicles:spawn()
@@ -54,23 +54,29 @@ function Vehicles:spawn()
     self.spawned=alive
     if #alive>=5 then self.api.log("Five trainer-spawned vehicles are still loaded; spawn limit reached.");return false end
     local actor
-    local ok,err=pcall(function()
+    local stage="player availability"
+    local ok,err=xpcall(function()
         local ctx=assert(self.api.player(),"Enter a level before spawning a vehicle")
         local option=self.catalog[self.selected]
+        stage="resolve loaded class: "..option.name
         local class=assert(self.api.class(option.path),"This car blueprint is not loaded in this level; select another")
+        stage="player spawn transform"
         local transform=self.api.spawnTransform(ctx)
+        stage="native engine spawn"
         actor=self.api.begin(ctx,class,transform)
         assert(self.api.valid(actor),"No clear spawn position; move to an open area")
+        stage="configure new vehicle"
         self.api.prepare(actor)
+        stage="finish vehicle construction"
         local finished=self.api.finish(actor,transform)
         assert(self.api.valid(finished),"The game did not finish constructing the car")
         actor=finished
         self.spawned[#self.spawned+1]=actor
-        self.api.log("Spawned "..option.name..". Use the game's normal enter-vehicle interaction. Traffic cars may not support player entry.")
-    end)
+        self.api.log("Spawned "..option.name..". Use the game's normal enter-vehicle interaction. Traffic cars may not support player entry; F5 provides trainer driving.")
+    end,function(e)return debug.traceback(tostring(e),2)end)
     if not ok then
         if actor and self.api.valid(actor) then pcall(self.api.destroy,actor) end
-        self.api.log("Vehicle spawn cancelled: "..tostring(err));return false
+        self.api.log("Vehicle spawn cancelled at "..stage..": "..tostring(err));return false
     end
     return true
 end

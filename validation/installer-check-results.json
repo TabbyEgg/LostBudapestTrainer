@@ -5,7 +5,7 @@
   "failures": 0,
   "checks": [
     {
-      "name": "fresh installation completes: Lost Budapest Noclip installed/updated. Start the game normally; F6 toggles noclip.\nReceipt and original-file backups are in: /workspace/lost-budapest-research/lbn-install-tests-2zreu3fa/fresh/game/Eltunt_Budapest3/Binaries/Win64\n",
+      "name": "fresh installation completes: Lost Budapest Noclip installed/updated. Start the game normally; F6 toggles noclip.\nReceipt and original-file backups are in: /workspace/lost-budapest-research/lbn-install-tests-pfimhdro/fresh/game/Eltunt_Budapest3/Binaries/Win64\n",
       "pass": true
     },
     {
@@ -21,7 +21,7 @@
       "pass": true
     },
     {
-      "name": "fresh receipt lists exactly seven payloads plus merged mod list",
+      "name": "fresh receipt lists all thirteen payloads plus merged mod list",
       "pass": true
     },
     {
@@ -37,7 +37,7 @@
       "pass": true
     },
     {
-      "name": "Win64 direct install with existing loader/config completes: Lost Budapest Noclip installed/updated. Start the game normally; F6 toggles noclip.\nReceipt and original-file backups are in: /workspace/lost-budapest-research/lbn-install-tests-2zreu3fa/existing/game/Eltunt_Budapest3/Binaries/Win64\n",
+      "name": "Win64 direct install with existing loader/config completes: Lost Budapest Noclip installed/updated. Start the game normally; F6 toggles noclip.\nReceipt and original-file backups are in: /workspace/lost-budapest-research/lbn-install-tests-pfimhdro/existing/game/Eltunt_Budapest3/Binaries/Win64\n",
       "pass": true
     },
     {
@@ -226,7 +226,7 @@
     }
   ],
   "source_sha256": {
-    "install.ps1": "6c68bcbb52d850cf42bcb68afce6756a4f5fd2d7f2a2993f0a0be14a234ff320",
+    "install.ps1": "4aeee7ca1dac01b0948e8a77a071fd6d1714309ae6bf6e14d0cb9f5fd6567766",
     "uninstall.ps1": "d0bf32ae46c63b2bd7ea37936d4a1af6f5d669b6faab98ba96e8dd4a1b69b682",
     "Install.cmd": "a5b257cf493b255fc78183b3654cec51ab7a038d94f82befc52134d45345a8de",
     "Uninstall.cmd": "b241e0c54ce8c9500b55b1d11c3d98d5e90fecd9b93dd55caf0a7e3e270f559d",

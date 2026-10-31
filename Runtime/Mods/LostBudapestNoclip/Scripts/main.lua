@@ -27,8 +27,21 @@ for name,action in pairs({Repair="repair",Next="cycleVehicle",Diagnose="diagnose
     else adapter.log("Vehicle key unavailable/already assigned: "..name.."; edit config.VehicleKeys to remap.") end
 end
 
+local menu=require("menu").new(require("menu_engine"),function()
+    return {flying=controller:isEnabled(),god=protection.manual,protected=protection.landing or protection.flight,
+        speed=config.Speeds[controller.speedIndex],model=vehicles.catalog[vehicles.selected].name,driving=vehicles.driver~=nil}
+end,request)
+adapter.onLog=function(message)menu:notice(message)end
+local menuKey=Key[config.MenuKey or "INSERT"]
+if menuKey and not usedKeys[menuKey] then
+    usedKeys[menuKey]=true
+    RegisterKeyBind(menuKey,function()request("menu")end)
+else adapter.log("Menu key unavailable/already assigned; edit config.MenuKey.") end
+local hookOk,hookError=pcall(require("menu_engine").register,function(hud)menu:frame(hud)end)
+if not hookOk then adapter.log("HUD menu callback unavailable; hotkeys remain active: "..tostring(hookError))end
+
 LoopAsync(16, function()
-    if not queued and (#actions > 0 or controller:hasWork() or protection:hasWork() or vehicles:hasWork()) then
+    if not queued and (#actions > 0 or controller:hasWork() or protection:hasWork() or vehicles:hasWork() or menu:hasWork()) then
         queued = true
         local ok, err = pcall(ExecuteInGameThread, function()
             -- Drop the pending flag even if a callback fails. Only one queued
@@ -37,24 +50,29 @@ LoopAsync(16, function()
                 local pending = actions
                 actions = {}
                 for _, action in ipairs(pending) do
-                    if action == "diagnose" then
-                        local diagnosticOk,diagnosticError=pcall(function() adapter.diagnose();require("vehicle_engine").diagnose() end)
+                    if action=="toggle" or action=="return" or action=="drive" or action=="repair" or action=="spawnVehicle" or action=="diagnose" then menu:close() end
+                    if action=="menu" then menu:toggle()
+                    elseif action == "diagnose" then
+                        local diagnosticOk,diagnosticError=xpcall(function() adapter.diagnose();require("vehicle_engine").diagnose() end,function(e)return debug.traceback(tostring(e),2)end)
                         if not diagnosticOk then adapter.log("Vehicle diagnostic incomplete: "..tostring(diagnosticError)) end
                     elseif action == "drive" then
                         if controller:isEnabled() then adapter.log("Turn noclip off before entering trainer driving.") else vehicles:drive() end
                     elseif action == "repair" then vehicles:repair()
                     elseif action == "cycleVehicle" then vehicles:cycle()
+                    elseif action == "previousVehicle" then vehicles:cycle(-1)
                     elseif action == "spawnVehicle" then vehicles:spawn()
                     elseif action == "godmode" then protection:toggle()
                     elseif action == "return" then controller:disable(true)
                     else controller[action](controller) end
                 end
+                menu:tick()
                 controller:tick()
                 protection:tick(controller:isEnabled())
                 vehicles:tick()
             end)
             queued = false
             if not callbackOk then
+                menu:close()
                 controller:disable(false)
                 adapter.log("Trainer callback stopped: " .. tostring(callbackError))
             end
@@ -72,6 +90,7 @@ if type(RegisterHook) == "function" then
     -- optional LoadMapPre callback has an upstream argument-count defect.
     local ok, err = pcall(RegisterHook, "/Script/Engine.PlayerController:ClientRestart", function()
         actions = {}
+        menu:close()
         controller:disable(false)
         local keepGod=protection.manual
         protection:reset()
@@ -82,4 +101,4 @@ if type(RegisterHook) == "function" then
     if not ok then adapter.log("Player restart hook unavailable; pawn-change cleanup remains active: " .. tostring(err)) end
 end
 
-adapter.log("Ready. F1 repair/recover; F2 next vehicle; F3 diagnostics; F4 god; F5 enter/exit; F6 noclip; F7/F8 speed; F9 spawn; F10 return.")
+adapter.log("Ready. INSERT menu; F1 repair/recover; F2 next vehicle; F3 diagnostics; F4 god; F5 enter/exit; F6 noclip; F7/F8 speed; F9 spawn; F10 return.")

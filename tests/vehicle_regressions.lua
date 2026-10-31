@@ -42,8 +42,9 @@ case('trainer driving validates entry, rolls back failure and restores on exit',
     a.repairTarget=function()return nil end
     check(not v:repair(),'repair never touches an unowned distant vehicle')
 end)
-case('native vehicle adapter uses typed deferred spawn, health guard and reversible possession',function()
+case('native vehicle adapter uses native spawn helper, health guard and reversible possession',function()
     local previousAdapter,previousEngine=package.loaded.adapter,package.loaded.vehicle_engine
+    local previousSpawn=package.loaded.native_spawn
     local previousFind,previousStatic,previousName,previousEnum=FindAllOf,StaticFindObject,FName,EFindName
     local objects,vehicle,player,pc,context,statics={},nil,nil,nil,nil,{}
     local function fname(n)return{ToString=function()return n end}end
@@ -125,14 +126,13 @@ case('native vehicle adapter uses typed deferred spawn, health guard and reversi
     function pc:SetViewTargetWithBlend(target,time,blend,exp,lock)
         assert(time==0 and blend==0 and exp==0 and lock==false);self.viewTarget=target
     end
-    function statics:BeginDeferredActorSpawnFromClass(world,cl,transform,collision,owner)
-        if cl==cameraClass then assert(world==vehicle and owner==vehicle and collision==1);camera.alive=true;camera.updated=false;return camera end
-        assert(world==player and cl==class and collision==3 and owner==player)
-        check(math.abs(transform.Translation.Y-700)<0.001 and transform.Scale3D.X==1,'spawn transform is forward from player with unit scale')
-        check(math.abs(transform.Rotation.Z^2+transform.Rotation.W^2-1)<0.001,'spawn quaternion is normalized')
+    package.loaded.native_spawn={actor=function(ctx,cl,transform,kind)
+        if cl==cameraClass then assert(ctx.controller==pc and ctx.pawn==vehicle and kind=='CameraActor');camera.alive=true;camera.updated=false;return camera end
+        assert(ctx.pawn==player and ctx.controller==pc and cl==class and kind=='WheeledVehicle')
+        check(math.abs(transform.Translation.Y-700)<0.001 and transform.Scale3D.X==1,'spawn placement is forward from player with unit scale')
+        check(math.abs(transform.Rotation.Z^2+transform.Rotation.W^2-1)<0.001,'spawn rotation is normalized')
         return vehicle
-    end
-    function statics:FinishSpawningActor(v,t)assert(v==vehicle or v==camera);return v end
+    end}
     package.loaded.adapter={log=function()end,playerContext=function()return context end,gameplay=function()return statics end}
     package.loaded.vehicle_engine=nil
     FindAllOf=function(name)assert(name=='WheeledVehicle');return objects end
@@ -147,7 +147,7 @@ case('native vehicle adapter uses typed deferred spawn, health guard and reversi
         class=klass('/Game/Autok/Abel_Car.Abel_Car_C',1)
         pc.badRotation=true;check(not pcall(e.spawnTransform,context),'invalid player rotation never reaches a native spawn')
         pc.badRotation=false
-        local transform=e.spawnTransform(context);check(e.begin(context,class,transform)==vehicle,'deferred spawn returns native actor')
+        local transform=e.spawnTransform(context);check(e.begin(context,class,transform)==vehicle,'native helper returns spawned actor')
         e.prepare(vehicle);check(vehicle.AutoPossessAI==0 and vehicle.AutoPossessPlayer==0,'spawn neither creates route-less traffic AI nor steals player possession')
         check(e.finish(vehicle,transform)==vehicle,'construction finishes exactly that actor')
         class=klass('/Game/Traffic_AI_System/Cars/Hatch/BP_Hatch.BP_Hatch_C',1);vehicle.tick=true
@@ -201,6 +201,7 @@ case('native vehicle adapter uses typed deferred spawn, health guard and reversi
 
     end)
     package.loaded.adapter,package.loaded.vehicle_engine=previousAdapter,previousEngine
+    package.loaded.native_spawn=previousSpawn
     FindAllOf,StaticFindObject,FName,EFindName=previousFind,previousStatic,previousName,previousEnum
     if not ok then error(err)end
 end)

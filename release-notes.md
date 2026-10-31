@@ -1,9 +1,9 @@
-## 0.2.0 — updater and experimental vehicles
+## 0.3.0 — trainer menu and revised vehicle spawning
 
-- **Update.cmd** downloads the latest release, verifies the asset hash, and upgrades without uninstalling manually. Existing original backups and edited trainer configuration are preserved.
-- **F9** spawns the selected loaded vehicle blueprint. **F2** cycles Abel's car, estate, hatchback, liftback, luxury, van 1 and van 2.
-- **F5** enters/exits trainer driving for Abel's car or a trainer-spawned vehicle. W/S forward/reverse, A/D steering, Space brake; fixed chase view. Restore your original character on exit.
-- **F1** rights/recovers the vehicle and repairs a verified game repair event or recognized health fields. If health repair is unavailable, the log says damage was not changed.
-- **F3** diagnostics include relevant vehicle functions and properties. F4 god mode and F6/F7/F8/F10 flight controls remain.
+- **Insert** opens a mouse/keyboard trainer menu: noclip, god mode, flight speed, return, vehicle model, spawn, enter/exit, recovery/repair and diagnostics.
+- Live status and recent trainer messages are visible on the HUD. Up/Down selects, Left/Right adjusts, Enter activates, Backspace closes.
+- Vehicle and camera spawning now use Unreal's native Summon function, avoiding UE4SS 3.0.1's nested FTransform serializer. Temporary helper/settings are restored on success and failure. This addresses the native spawn failure reported with 0.2.0 but still needs an in-game retest.
+- Spawn failures include the failing stage and traceback. Original function-address-only errors are no longer the sole diagnostic.
+- Existing hotkeys and Update.cmd remain available. The menu releases its input locks on close, player changes and rendering failure; missing HUD callbacks never lock input.
 
-New vehicle functionality is experimental and needs in-game testing. Download/extract this ZIP once to get Update.cmd; future updates can use that command. Close the game first. See README for entry, repair and configuration details.
+Fully quit the game, run **Update.cmd**, then launch and press **Insert**. New menu drawing and revised spawning are experimental until verified in-game. Repair remains physical recovery when the vehicle exposes no verified health repair.

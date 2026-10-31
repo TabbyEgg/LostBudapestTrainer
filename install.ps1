@@ -162,7 +162,8 @@ try {
         'Mods/LostBudapestNoclip/Scripts/main.lua', 'Mods/LostBudapestNoclip/Scripts/controller.lua',
         'Mods/LostBudapestNoclip/Scripts/adapter.lua', 'Mods/LostBudapestNoclip/Scripts/config.lua',
         'Mods/LostBudapestNoclip/Scripts/protection.lua', 'Mods/LostBudapestNoclip/Scripts/vehicles.lua',
-        'Mods/LostBudapestNoclip/Scripts/vehicle_engine.lua')) {
+        'Mods/LostBudapestNoclip/Scripts/vehicle_engine.lua', 'Mods/LostBudapestNoclip/Scripts/native_spawn.lua',
+        'Mods/LostBudapestNoclip/Scripts/menu.lua', 'Mods/LostBudapestNoclip/Scripts/menu_engine.lua')) {
         if (-not $payload.ContainsKey($required)) { throw "Required payload file is missing: $required" }
     }
     foreach ($file in @(Get-ChildItem -LiteralPath $runtime -File -Recurse -Force)) {

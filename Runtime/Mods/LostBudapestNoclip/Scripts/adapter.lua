@@ -1,5 +1,5 @@
 -- UE4SS v3.0.1 / Unreal 4.27 adapter. Call only on the game thread.
-local Adapter = {}
+local Adapter = {menuOpen=false}
 local cachedController, gameplay, keys = nil, nil, {}
 
 local function valid(object)
@@ -36,7 +36,8 @@ local function down(controller, name)
 end
 
 function Adapter.log(message)
-    print("[Lost Budapest Noclip 0.2.0] " .. message .. "\n")
+    print("[Lost Budapest Trainer 0.3.0] " .. message .. "\n")
+    if Adapter.onLog then pcall(Adapter.onLog,message) end
 end
 
 function Adapter.reset()
@@ -136,7 +137,7 @@ function Adapter.rotation(ctx)
     return {Pitch = rotation.Pitch, Yaw = rotation.Yaw}
 end
 function Adapter.time(ctx) return statics():GetTimeSeconds(ctx.pawn) end
-function Adapter.paused(ctx) return statics():IsGamePaused(ctx.pawn) end
+function Adapter.paused(ctx) return Adapter.menuOpen or statics():IsGamePaused(ctx.pawn) end
 function Adapter.blocked(ctx)
     return ctx.controller:IsMoveInputIgnored() or ctx.controller:IsLookInputIgnored()
 end
@@ -207,6 +208,9 @@ function Adapter.diagnose()
             end)
             if not ok then Adapter.log("Skipped unavailable object: " .. tostring(err)) end
         end
+    end
+    for _,hud in ipairs(FindAllOf("HUD") or {}) do
+        if valid(hud) then Adapter.log("HUD "..hud:GetFullName().." CLASS "..hud:GetClass():GetFullName()) end
     end
     Adapter.log("VEHICLE DIAGNOSTIC END; stand beside a working car and send UE4SS.log")
 end

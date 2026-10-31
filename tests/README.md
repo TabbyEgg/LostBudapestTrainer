@@ -33,3 +33,11 @@ The temporary root must be on the EXE's filesystem to allow hardlinks. Use
 `--temp-root` for another writable directory on that filesystem. Existing
 validation evidence was produced under PowerShell 7 on Linux; Windows folder
 selection and Windows PowerShell 5.1 still require a platform check.
+
+Menu cases cover missing HUD events, rendering errors, balanced input-lock
+restoration, mouse/keyboard edges, live status and read-only error notifications.
+Native spawn fixtures reject unknown classes, identify only a newly created
+actor, and verify helper/class defaults/collision restoration on every modeled
+failure. The replacement spawn path passes only flat vectors/rotators into
+Unreal, never nested FTransform tables. These are simulated boundary tests, not
+a live UE4SS/game validation.

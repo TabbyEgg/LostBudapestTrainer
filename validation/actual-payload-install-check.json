@@ -1,11 +1,11 @@
 {
   "install": {
     "exit": 0,
-    "output": "Lost Budapest Noclip installed/updated. Start the game normally; F6 toggles noclip.\nReceipt and original-file backups are in: /workspace/lost-budapest-research/lbn-final-payload-7ur9fy6z/game/Eltunt_Budapest3/Binaries/Win64\n"
+    "output": "Lost Budapest Noclip installed/updated. Start the game normally; F6 toggles noclip.\nReceipt and original-file backups are in: /workspace/lost-budapest-research/lbn-menu-payload-bf48xekg/game/Eltunt_Budapest3/Binaries/Win64\n"
   },
   "update": {
     "exit": 0,
-    "output": "Lost Budapest Noclip installed/updated. Start the game normally; F6 toggles noclip.\nReceipt and original-file backups are in: /workspace/lost-budapest-research/lbn-final-payload-7ur9fy6z/game/Eltunt_Budapest3/Binaries/Win64\nUpdate complete. Start the game normally.\n"
+    "output": "Lost Budapest Noclip installed/updated. Start the game normally; F6 toggles noclip.\nReceipt and original-file backups are in: /workspace/lost-budapest-research/lbn-menu-payload-bf48xekg/game/Eltunt_Budapest3/Binaries/Win64\nUpdate complete. Start the game normally.\n"
   },
   "actual_payload_files_installed": true,
   "engine_override_4_27_verified": true,

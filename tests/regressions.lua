@@ -454,5 +454,7 @@ case('god mode and post-flight landing guard preserve original damage permission
 end)
 
 dofile(TRAINER_ROOT..'/tests/vehicle_regressions.lua')(check,case)
+dofile(TRAINER_ROOT..'/tests/menu_regressions.lua')(check,case)
+dofile(TRAINER_ROOT..'/tests/spawn_regressions.lua')(check,case)
 
 TEST_PRINT(string.format('RESULT: %d assertions; %d failures.',TEST_ASSERTIONS,TEST_FAILURES))

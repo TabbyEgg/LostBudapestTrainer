@@ -7,11 +7,9 @@ local function rotation(v)return v and number(v.Pitch) and number(v.Yaw) and num
 function Engine.valid(actor) return actor~=nil and actor:IsValid() end
 function Engine.player()
     local ctx=adapter.playerContext()
-    if ctx then
-        local charOk,char=pcall(function()return ctx.pawn.CharacterMovement end)
-        local carOk,car=pcall(function()return ctx.pawn.VehicleMovement end)
-        if not ((charOk and Engine.valid(char)) or (carOk and Engine.valid(car))) or ctx.controller.bShowMouseCursor==true then return nil end
-    end
+    -- Avoid probing nonexistent CharacterMovement/VehicleMovement fields. On the
+    -- stable UE4SS loader a missing-property native error can hide its own text.
+    if ctx and ctx.controller.bShowMouseCursor==true then return nil end
     if ctx and not ctx.controller:IsMoveInputIgnored() and not ctx.controller:IsLookInputIgnored()
         and not adapter.gameplay():IsGamePaused(ctx.pawn) then return ctx end
 end
@@ -30,7 +28,7 @@ function Engine.spawnTransform(ctx)
 end
 function Engine.begin(ctx,class,transform)
     -- Adjust if possible; otherwise decline rather than forcing an overlap.
-    return adapter.gameplay():BeginDeferredActorSpawnFromClass(ctx.pawn,class,transform,3,ctx.pawn)
+    return require("native_spawn").actor(ctx,class,transform,"WheeledVehicle")
 end
 function Engine.prepare(actor)
     -- Traffic blueprints must not auto-possess an AI with no assigned route.
@@ -38,7 +36,7 @@ function Engine.prepare(actor)
     actor.AutoPossessPlayer=0
 end
 function Engine.finish(actor,transform)
-    local finished=adapter.gameplay():FinishSpawningActor(actor,transform)
+    local finished=actor
     if Engine.valid(finished) and finished:GetClass():GetFullName():find("/Game/Traffic_AI_System/Cars/",1,true) then
         -- No traffic route was assigned. Leave parked until trainer driving starts.
         finished:SetActorTickEnabled(false)
@@ -146,11 +144,9 @@ function Engine.enterDriver(state)
     state.pc:SetControlRotation(facing)
     local class=assert(Engine.class("/Script/Engine.CameraActor"),"Engine camera class is unavailable")
     local transform={Translation=state.actor:K2_GetActorLocation(),Rotation={X=0,Y=0,Z=0,W=1},Scale3D={X=1,Y=1,Z=1}}
-    state.camera=adapter.gameplay():BeginDeferredActorSpawnFromClass(state.actor,class,transform,1,state.actor)
+    state.camera=require("native_spawn").actor({controller=state.pc,pawn=state.actor},class,transform,"CameraActor")
     assert(Engine.valid(state.camera),"Could not create driving camera")
     state.cameraId=id(state.camera)
-    local finished=adapter.gameplay():FinishSpawningActor(state.camera,transform)
-    assert(Engine.valid(finished) and id(finished)==state.cameraId,"Could not finish driving camera")
     -- A real CameraActor bypasses character-only ALS camera-manager logic.
     state.pc:SetViewTargetWithBlend(state.camera,0,0,0,false)
 end
@@ -223,6 +219,11 @@ function Engine.driveTick(state)
     assert(Engine.valid(state.pc) and Engine.valid(state.actor) and Engine.valid(state.movement),"The driving context changed")
     assert(id(state.movement)==state.movementId,"The vehicle movement component was replaced")
     assert(id(state.actor)==state.actorId and Engine.valid(state.pc.Pawn) and id(state.pc.Pawn)==state.actorId,"Vehicle control changed")
+    if adapter.menuOpen then
+        state.movement:SetThrottleInput(0);state.movement:SetSteeringInput(0)
+        state.movement:SetBrakeInput(1);state.movement:SetHandbrakeInput(true)
+        return
+    end
     if adapter.gameplay():IsGamePaused(state.actor) then return end
     local facing=state.actor:K2_GetActorRotation()
     assert(rotation(facing),"Vehicle camera rotation is invalid")
