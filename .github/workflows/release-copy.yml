@@ -1,0 +1,21 @@
+name: Refresh release descriptions
+on:
+  push:
+    paths:
+      - '.github/release-note-edits.json'
+      - '.github/workflows/release-copy.yml'
+      - 'tools/clean_release_copy.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  update-descriptions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python tools/clean_release_copy.py
+        env:
+          GH_TOKEN: ${{ github.token }}

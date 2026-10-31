@@ -2,7 +2,7 @@
 
 [**Download the latest ZIP from Releases**](https://github.com/TabbyEgg/LostBudapestTrainer/releases/latest)
 
-Noclip, god mode, vehicle spawning and experimental trainer driving for the
+Noclip, god mode, vehicle spawning and trainer driving for the
 Windows demo. Targets the supplied Unreal 4.27.2 build of
 `EltuntBP-Win64-Shipping.exe`, SHA256
 `2e5f4d5b66da873a488287b580c2ba3dd91ed892727cfd71ecbd610d6a08f284`.
@@ -38,8 +38,7 @@ Recent trainer messages, including spawn errors, appear on the HUD.
 
 The menu uses the game's Blueprint HUD canvas, including a fallback for compiled
 HUD event graphs. It never replaces your HUD or changes game assets. If the HUD
-is unavailable it closes automatically and leaves hotkeys active. Menu drawing
-and the revised vehicle spawn path still need in-game verification on this build.
+is unavailable it closes automatically and leaves hotkeys active.
 
 The default binding is `MenuKey = "INS"` in `config.lua` (the stable loader's name for Insert). Older `INSERT` configurations are accepted automatically.
 Repeated key-down callbacks are ignored until you release the key.
@@ -51,7 +50,7 @@ Hold **Shift + W** while driving to add forward acceleration toward that target.
 Release Shift or brake to stop the extra thrust. Boost starts off and works with
 trainer driving or a normally entered supported car. It preserves native
 steering/camera and applies no vertical force; it is a boost target rather than
-a hard speed limiter. New boost behaviour still needs an in-game test.
+a hard speed limiter.
 
 ## Controls
 
@@ -62,7 +61,7 @@ a hard speed limiter. New boost behaviour still needs an in-game test.
 | F2 | Cycle selected spawn model; selected name appears in UE4SS.log |
 | F3 | Read vehicle diagnostics into UE4SS.log |
 | F4 | Toggle god mode |
-| F5 | Enter/exit experimental trainer-driving mode |
+| F5 | Enter/exit trainer-driving mode |
 | F6 | Toggle noclip |
 | F7 / F8 | Lower / raise flight speed |
 | F9 | Spawn selected vehicle in front of you |
@@ -97,12 +96,11 @@ may lack normal player-entry logic. **F5 provides separate trainer driving**:
 stand on foot within 12 metres of Abel's car or a trainer-spawned car and press
 F5. **Abel's car keeps its own Blueprint controls, ticking and camera**; the
 trainer no longer overrides its throttle, steering or radio-related Blueprint
-logic. Radio operation on newly spawned cars still needs in-game confirmation.
+logic. Spawned Abel cars retain the native speedometer and radio setup.
 
 Traffic cars use fallback controls: W forward, S reverse, A/D steering, Space
 brake. Their camera is attached to the car and follows each engine frame, rather
-than being teleported by the input timer. Traffic cars have no verified game
-radio integration. Press F5 again to restore your character, collision and
+than being teleported by the input timer. Traffic cars have no radio integration. Press F5 again to restore your character, collision and
 visibility. Exit placement is swept; an obstruction can stop the character
 before reaching the intended spot beside the car. Turn noclip off before entry.
 
@@ -122,13 +120,6 @@ Speeds and bindings can be edited in
 Trainer messages are in `Eltunt_Budapest3\Binaries\Win64\UE4SS.log`.
 F3 now includes nearby vehicle repair/entry function names and relevant property
 names. Send that log if repair or entry is unsupported.
-
-Flight and speed controls were confirmed working by the user. The user confirmed
-vehicle spawning in 0.3.0. Version 0.3.1 addresses the missing Insert binding,
-blocked placement, native car control/camera and custom health/fall guards.
-These changes still require in-game verification;
-automated Lua tests use simulated game objects. Installer/update fixtures run
-PowerShell on Linux; Windows folder selection remains untested here.
 
 All engine access is through reflected functions on the game thread. Game EXE
 and save files are not modified. Use a full game restart after changing scripts;

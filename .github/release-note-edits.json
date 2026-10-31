@@ -1,0 +1,32 @@
+[
+  {
+    "id": 430215081,
+    "tag": "v0.3.1",
+    "new_body": "## 0.3.1 — menu binding, vehicle controls and protection fixes\n\n- Fixed **Insert**: UE4SS 3.0.1 calls the key `INS`, so 0.3.0 never registered it. Preserved `INSERT` configurations now work too.\n- Held hotkeys no longer repeatedly toggle protection or consume multiple vehicle slots until released.\n- Added **Vehicle boost** in the menu: Off, 60, 100, 150, 200 or 300 km/h targets. Hold Shift + W to add forward thrust; releasing Shift or braking stops it. Starts off and preserves native steering/camera.\n- Default vehicle cap increased to **10**, configurable with `MaxVehicles`. Actual spawn positions are checked and blocked placements try alternatives ahead. Failed placements are removed and never counted.\n- Abel's car now retains its own Blueprint input, ticking and camera. The trainer no longer imposes generic throttle/steering or a separate fixed camera on it. Traffic radio is not implemented.\n- Traffic fallback camera is attached to the vehicle rather than updated by an asynchronous timer. Entry and menu close release the parking brake correctly.\n- God/flight protection zeroes native damage before TakeDamage for the protected player, rather than healing standard damage afterward. It also preserves living Abel's custom Health and caps dangerous falling velocity to 3 m/s; landing protection remains until grounded. It does not revive scripted deaths or establish protection against all instant-kill scripts.\n- F3 reports player Health/damage permission and vehicle radio/camera/input function names. It no longer uses parameter enumeration unavailable on this stable loader's UFunction wrapper.\n\nClose the game and run **Update.cmd**. Press **Insert** for the menu; enable **God mode** there or with **F4**.\n",
+    "old_body_sha256": "a32d8d7a7d53b2e3582035ebc22f51840d9153e130f4603159e39b56de5b2fe5"
+  },
+  {
+    "id": 430069894,
+    "tag": "v0.3.0",
+    "new_body": "## 0.3.0 — trainer menu and revised vehicle spawning\n\n- **Insert** opens a mouse/keyboard trainer menu: noclip, god mode, flight speed, return, vehicle model, spawn, enter/exit, recovery/repair and diagnostics.\n- Live status and recent trainer messages are visible on the HUD. Up/Down selects, Left/Right adjusts, Enter activates, Backspace closes.\n- Vehicle and camera spawning now use Unreal's native Summon function, avoiding UE4SS 3.0.1's nested FTransform serializer. Temporary helper/settings are restored on success and failure. This addresses the native spawn failure reported with 0.2.0.\n- Spawn failures include the failing stage and traceback. Original function-address-only errors are no longer the sole diagnostic.\n- Existing hotkeys and Update.cmd remain available. The menu releases its input locks on close, player changes and rendering failure; missing HUD callbacks never lock input.\n\nFully quit the game, run **Update.cmd**, then launch and press **Insert**. Repair remains physical recovery when the vehicle exposes no verified health repair.\n",
+    "old_body_sha256": "36ba71f5c259d20b14021f8050e1f11469285fa7831f6bbd6f0d554fcd16a74d"
+  },
+  {
+    "id": 430017717,
+    "tag": "v0.2.0",
+    "new_body": "## 0.2.0 — updater and experimental vehicles\n\n- **Update.cmd** downloads the latest release, verifies the asset hash, and upgrades without uninstalling manually. Existing original backups and edited trainer configuration are preserved.\n- **F9** spawns the selected loaded vehicle blueprint. **F2** cycles Abel's car, estate, hatchback, liftback, luxury, van 1 and van 2.\n- **F5** enters/exits trainer driving for Abel's car or a trainer-spawned vehicle. W/S forward/reverse, A/D steering, Space brake; fixed chase view. Restore your original character on exit.\n- **F1** rights/recovers the vehicle and repairs a verified game repair event or recognized health fields. If health repair is unavailable, the log says damage was not changed.\n- **F3** diagnostics include relevant vehicle functions and properties. F4 god mode and F6/F7/F8/F10 flight controls remain.\n\nDownload/extract this ZIP once to get Update.cmd; future updates can use that command. Close the game first. See README for entry, repair and configuration details.\n",
+    "old_body_sha256": "aba90ebbe7dc0ecc459e252f82d1a6aff8444e60d2838beb0fb4a8888ec72794"
+  },
+  {
+    "id": 429978040,
+    "tag": "v0.1.3",
+    "new_body": "## 0.1.3\n\n- Ten flight speeds: 2, 6, 12, 24, 48, 72, 96, 144, 240 and 480 m/s. F7/F8 cycle speeds; Shift boosts temporarily. Default remains 6 m/s.\n- F4 god mode and automatic post-flight landing protection retained.\n- F3 vehicle diagnostics; F11 is reserved for the game's window toggle.\n- Fixed diagnostics skipping further fields when an unavailable UObject returned no name.\n- Vehicle spawning/repair are not implemented in this build. Diagnostics identify the game's car classes.\n\nClose the game and uninstall the old trainer before installing this ZIP. God mode uses Unreal's standard damage permission; custom Blueprint health changes can bypass this flag.\n",
+    "old_body_sha256": "58bae7e097bbb8f2680c943e33bb1f1ccdf5aee22c2f991a37cf901c5f2b0f4a"
+  },
+  {
+    "id": 429976989,
+    "tag": "v0.1.2",
+    "new_body": "## 0.1.2\n\n- F4 toggles god mode through Unreal's player damage permission.\n- Noclip automatically protects against standard damage while flying and keeps a landing guard until grounded for 0.75 game seconds after flight ends.\n- Vehicle diagnostics moved from F11 to F3 because F11 conflicts with the game's window toggle.\n- Vehicle spawning and repair are not implemented yet. Stand beside an enterable car, press F3, and provide the vehicle diagnostic block from UE4SS.log to identify its actual blueprint and entry system.\n\nClose the game and uninstall the older trainer before installing this version. Download the ZIP asset, extract it and run Install.cmd.\n\nCustom Blueprint health changes may bypass Unreal's standard damage permission.\n",
+    "old_body_sha256": "d246e2306d5adf7fe29ee41041e200319d5116e33ecafc37217b2ef8ce0a3100"
+  }
+]
