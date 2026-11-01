@@ -25,7 +25,7 @@ Run `python tools/package.py` to verify the recorded source identities and
 dependency bytes, regenerate the payload manifest and create the release ZIP.
 The game EXE and research toolchains are excluded from releases.
 
-Current results: **284 Lua assertions and 55 installer assertions pass**.
+Current results: **306 Lua assertions and 55 installer assertions pass**.
 The actual runtime payload was also installed and removed in an isolated
 filesystem fixture, leaving the original game EXE unchanged. The loader proxy
 exports every DWM function imported by the supplied game EXE.
@@ -36,11 +36,17 @@ picker or Windows PowerShell 5.1 session was executed. The initial build needs
 an in-game check; the reported assertion counts do not establish that it works
 in the actual game.
 
-Version 0.4.0 uses a temporary native vehicle template profile during synchronous
+Version 0.4.1 uses a temporary native vehicle template profile during synchronous
 actor construction. Model mesh/animation/physics and wheel data are installed
 before physics initialization, then the exact original template is restored.
 Cases exercise one-based UE4SS arrays without resizing, incompatible rigs,
 construction overrides, partial writes, animation/physics mismatch, source
 instance fallback, immutable paint parents and native/legacy spawn routing.
-The user confirmed the original spawned Abel vehicle setup; the new model
-profiles have simulated boundary validation only, not a live engine run here.
+The user's 0.4.0 screenshot shows a converted estate with the native speedometer
+and radio HUD. Their log records successful estate construction, plus unit-scale
+refusals for the other five model selections. The same screenshot/report shows
+an extra open door panel and reversed A/D steering. Version 0.4.1 boundary cases
+cover positive per-axis scale copying without late physics resizing, converted-only
+steering correction, hidden-door component guards, legacy key migration, F2 HUD
+rendering/lock restoration and 100 placements without a spawn limit. The new code
+has not been executed in the Windows game here.

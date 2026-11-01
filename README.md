@@ -1,4 +1,4 @@
-# Lost Budapest Trainer 0.4.0
+# Lost Budapest Trainer 0.4.1
 
 [**Download the latest ZIP from Releases**](https://github.com/TabbyEgg/LostBudapestTrainer/releases/latest)
 
@@ -16,12 +16,12 @@ Select the game folder containing `Lost_Budapest_Demo.exe`, or its
 **Already installed? Run Update.cmd instead.** It downloads the latest official
 release, checks GitHub's asset SHA256, and upgrades the selected installation
 without a manual uninstall. Original uninstall backups and edited `config.lua`
-are retained. This new ZIP supplies Update.cmd for the first time; keep it for
-future one-command updates. The game must be closed.
+are retained. Keep Update.cmd for future one-command updates. The game must be closed.
 
 Updates stop before overwriting edited implementation files or conflicting
-loaders. If your configuration was edited, its speeds and key choices stay as
-written; new `VehicleKeys` default to the keys below when absent. For an offline
+loaders. Edited speeds and optional custom bindings are retained. **F2 is reserved for
+the menu and F3 for model selection**, including with older configs. A conflicting
+old diagnostics binding moves to Home. For an offline
 package upgrade, use `install.ps1 -Update -GameDirectory 'your game folder'`.
 
 **Uninstall.cmd** removes/restores files recorded in the receipt. Edited files
@@ -29,7 +29,7 @@ are retained for review. Keep the receipt and backup folder in the game folder.
 
 ## Menu
 
-Press **Insert** in a loaded game to open or close the trainer menu. Click a row,
+Press **F2** in a loaded game to open or close the trainer menu. Click a row,
 or use **Up/Down** to select, **Left/Right** for speed/model, **Enter** to activate,
 and **Backspace** to close. Speed and model selection stay open; spawning, entry,
 repair and noclip actions close the menu before restoring gameplay controls and
@@ -40,7 +40,8 @@ The menu uses the game's Blueprint HUD canvas, including a fallback for compiled
 HUD event graphs. It never replaces your HUD or changes game assets. If the HUD
 is unavailable it closes automatically and leaves hotkeys active.
 
-The default binding is `MenuKey = "INS"` in `config.lua` (the stable loader's name for Insert). Older `INSERT` configurations are accepted automatically.
+F2 opens/closes the menu even with an older Insert configuration. The log records
+both the menu request and its first successful HUD draw.
 Repeated key-down callbacks are ignored until you release the key.
 
 ### Vehicle boost
@@ -56,10 +57,10 @@ a hard speed limiter.
 
 | Key | Action |
 | --- | --- |
-| Insert | Open/close trainer menu |
+| F2 | Open/close trainer menu |
 | F1 | Recover/repair occupied or nearby supported vehicle |
-| F2 | Cycle selected spawn model; selected name appears in UE4SS.log |
-| F3 | Read vehicle diagnostics into UE4SS.log |
+| F3 | Cycle selected spawn model; selected name appears in UE4SS.log |
+| Home | Read vehicle diagnostics into UE4SS.log |
 | F4 | Toggle god mode |
 | F5 | Enter/exit trainer-driving mode |
 | F6 | Toggle noclip |
@@ -80,9 +81,9 @@ F4 toggles manual protection; flight applies the guard automatically.
 
 Spawn selection: **Abel's car** (default), estate, hatchback, liftback, luxury,
 van 1 and van 2. Models must already be loaded in the current level.
-Only already-loaded blueprints are used. The default cap is **10** live trainer
-spawns, configurable with `MaxVehicles` (1–50); older configs use 10 automatically.
-The menu shows the current count. A spawn only counts after its actual position
+Only already-loaded blueprints are used. **There is no trainer spawn cap**; old
+`MaxVehicles` settings are ignored. The menu shows the live spawned count.
+Spawning many vehicles still consumes game memory and physics resources. A spawn only counts after its actual position
 is checked. Blocked placements try other positions ahead; all blocked attempts
 remove the failed car rather than leaving it near the player. Spawn in a clear
 area. Failed spawns report the model and reason in the menu message and log.
@@ -94,12 +95,19 @@ and van selections use Abel's player-vehicle Blueprint with the selected model's
 body, animation, physics asset and wheel rig. This gives compatible models the
 same player controls, speedometer, radio and camera setup as Abel's car.
 
+Converted models hide the separate original Ábel door meshes and their collision,
+so entering or exiting cannot reveal an extra open door panel. Doors that are part
+of the selected body stay with that body. **Steering correction** defaults on for
+these converted cars, including normal game entry with F. Toggle it in the menu,
+or set `InvertVehicleSteering = false` in `config.lua` to retain original inputs.
+
 This applies to new trainer spawns. Existing map traffic and the original Abel
 car are left alone. Stand on foot within 12 metres and press **F5** to enter or
 exit a spawned car. Turn noclip off before entry.
 
 A model must have a loaded animated body, matching wheel count, valid wheel
-bones and unit mesh scale. An incompatible rig, or one replaced during game
+bones and finite positive mesh scale. Authored scale is applied before vehicle
+physics is created; zero or mirrored scale is refused. An incompatible rig, or one replaced during game
 construction, cancels the spawn with a log message. The trainer never silently
 substitutes the AI driving setup when player setup is selected.
 
@@ -123,7 +131,7 @@ Speeds and bindings can be edited in
 ## Status and limits
 
 Trainer messages are in `Eltunt_Budapest3\Binaries\Win64\UE4SS.log`.
-F3 now includes nearby vehicle repair/entry function names and relevant property
+Home includes nearby vehicle repair/entry function names and relevant property
 names. Send that log if repair or entry is unsupported.
 
 All engine access is through reflected functions on the game thread. Game EXE

@@ -26,7 +26,8 @@ function Menu:toggle()
     if self.open or self.locked then self:close();return end
     local ok,ctx=pcall(self.api.context)
     if not ok or not ctx then self.api.log('Close the game menu and enter a level before opening the trainer menu.');return end
-    self.context=ctx;self.open=true;self.stale=0;self.previous={};self.primed=false
+    self.context=ctx;self.open=true;self.stale=0;self.previous={};self.primed=false;self.drew=false
+    self.api.log('Trainer menu requested; waiting for the HUD. F2 closes it.')
 end
 function Menu:tick()
     if self.locked and not self.open then
@@ -50,11 +51,12 @@ function Menu:rows()
         {label='Return to flight start',value='F10',action='return'},
         {label='Vehicle model',value='<  '..s.model..'  >',action='cycleVehicle',left='previousVehicle',right='cycleVehicle',stay=true},
         {label='Vehicle boost',value=(s.boost or 0)>0 and ('<  '..s.boost..' km/h  >') or '<  OFF  >',action='boostFaster',left='boostSlower',right='boostFaster',stay=true},
-        {label='Spawn selected vehicle',value=string.format('%d/%d   F9',s.spawned or 0,s.maximum or 10),action='spawnVehicle'},
+        {label='Steering correction',value=s.steeringReady==false and 'UNAVAILABLE' or (s.steering and 'ON' or 'OFF'),action='steering',stay=true},
+        {label='Spawn selected vehicle',value=string.format('%d spawned   F9',s.spawned or 0),action='spawnVehicle'},
         {label=s.driving and 'Exit trainer driving' or 'Enter nearby vehicle',value='F5',action='drive'},
         {label='Recover / repair vehicle',value='F1',action='repair'},
-        {label='Write vehicle diagnostics',value='F3',action='diagnose'},
-        {label='Close menu',value='INSERT / Backspace',action='close'},
+        {label='Write vehicle diagnostics',value='Home',action='diagnose'},
+        {label='Close menu',value='F2 / Backspace',action='close'},
     }
 end
 function Menu:activate(row,direction)
@@ -126,8 +128,8 @@ function Menu:frame(raw)
         rect(colors.panel,x,y,w,(608+extra)*scale)
         rect(colors.accent,x,y,4*scale,(608+extra)*scale)
         text('LOST BUDAPEST',colors.accent,x+20*scale,y+17*scale,1.15)
-        text('TRAINER  /  0.4.0',colors.text,x+20*scale,y+48*scale,.85)
-        text('Mouse or arrows + Enter',colors.muted,x+20*scale,y+75*scale,.72)
+        text('TRAINER  /  0.4.1',colors.text,x+20*scale,y+48*scale,.85)
+        text('F3: next car  |  F9: spawn  |  arrows + Enter',colors.muted,x+20*scale,y+75*scale,.72)
         for i,row in ipairs(rows) do
             local yy=y+top+(i-1)*rh
             rect(i==self.selected and colors.selected or colors.row,x+10*scale,yy,w-20*scale,rh-3*scale)
@@ -137,6 +139,7 @@ function Menu:frame(raw)
         text('LATEST MESSAGE',colors.muted,x+20*scale,y+(505+extra)*scale,.68)
         local message=self.message
         for i=1,3 do text(message:sub((i-1)*64+1,i*64),colors.text,x+20*scale,y+(525+extra+(i-1)*21)*scale,.67) end
+        if not self.drew then self.drew=true;self.api.log('Trainer menu drawn successfully.')end
     end)
     if not ok then self:close();self.api.log('Trainer menu stopped safely: '..tostring(err)) end
 end

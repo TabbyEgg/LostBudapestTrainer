@@ -61,3 +61,9 @@ independence, invalid rig refusal, animation/runtime wheel mismatch cleanup,
 source-instance fallback and explicit legacy routing. No array is resized and
 no source traffic actor/default is modified. Native template copy timing remains
 a modeled Unreal boundary; the fixture does not execute the Windows game.
+
+0.4.1 cases exercise reserved F2/F3/Home migration from preserved configs, the
+actual main-to-HUD adapter path and balanced menu locks, 100 spawns with a legacy
+limit of one, converted-car-only steering interception through native input,
+positive source scale installed before construction without late resizing, and
+extra-door visibility/hidden/collision guards scoped to converted components.

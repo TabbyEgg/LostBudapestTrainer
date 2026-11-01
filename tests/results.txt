@@ -11,8 +11,9 @@ PASS: failed restoration stays recoverable and cannot stack a second activation
 PASS: external engine ownership changes stop flight
 PASS: new vehicle keys are queued and failed diagnostics cannot drop active flight
 PASS: native pre-damage guard suppresses protected-player damage before health processing
+PASS: F2 reaches the real HUD renderer and closes without leaving input locked
 PASS: held hotkeys cannot repeatedly toggle god mode
-PASS: saved INSERT spelling remains compatible with the actual INS enum
+PASS: preserved old shortcuts migrate to the reserved F2 menu and F3 selection
 PASS: player custom health and lethal falling speed are guarded without resurrecting dead pawns
 PASS: shipped UE4SS adapter and bindings use typed game-thread calls
 PASS: main scheduler recovers from queue failure and player restarts
@@ -26,6 +27,7 @@ PASS: god mode and post-flight landing guard preserve original damage permission
 PASS: vehicle spawning uses real catalog classes, rejects blocked spawns and cleans failures
 PASS: vehicle boost starts off, supports normal driving and returns to off cleanly
 PASS: trainer driving validates entry, rolls back failure and restores on exit
+PASS: steering correction applies to converted player cars through the native input setter
 PASS: native vehicle adapter uses native spawn helper, health guard and reversible possession
 PASS: menu opens only with a playable context and a working local HUD
 PASS: menu mouse and keyboard edges dispatch one action and release locks first
@@ -34,7 +36,9 @@ PASS: native menu adapter uses named output parameters and balances input locks
 PASS: stable-loader native spawn avoids FTransform marshaling and restores all temporary state
 PASS: selected bodies are constructed on Abel player Blueprint with matching animation and wheel rig
 PASS: incompatible source rigs are refused before template edits or native spawning
+PASS: authored source scale is installed before construction without late physics resizing
+PASS: converted models hide only the extra door components and keep them hidden after entry
 PASS: partial template changes and failed construction always restore the native setup
 PASS: runtime source rigs can supply construction-only assets without sharing mutable paint
 PASS: vehicle model routing chooses the native player template and preserves explicit legacy mode
-RESULT: 284 assertions; 0 failures.
+RESULT: 306 assertions; 0 failures.

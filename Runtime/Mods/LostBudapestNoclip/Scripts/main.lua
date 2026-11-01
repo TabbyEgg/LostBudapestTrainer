@@ -3,7 +3,8 @@ local adapter = require("adapter")
 local Controller = require("controller")
 local controller = Controller.new(config, adapter)
 local protection = require("protection").new(adapter)
-local vehicles=require("vehicles").new(require("vehicle_engine"),config)
+local vehicleEngine=require("vehicle_engine")
+local vehicles=require("vehicles").new(vehicleEngine)
 local actions, queued = {}, false
 local heldKeys={}
 local usedKeys={}
@@ -13,33 +14,50 @@ local function request(action,key)
     if #actions < 16 then actions[#actions + 1] = key and {name=action,key=key} or action end
 end
 
-for name, action in pairs({Toggle = "toggle", Slower = "slower", Faster = "faster", Return = "return"}) do
-    local key = assert(Key[config.Keys[name]], "Unknown trainer key: " .. tostring(config.Keys[name]))
-    usedKeys[key]=true
-    RegisterKeyBind(key, function() request(action,config.Keys[name]) end)
+local function bind(name,action,fallback)
+    if name==false then return end
+    local function available(value)
+        if type(value)~="string" then return end
+        value=value:upper()
+        if value=="INSERT" then value="INS" end
+        local key=Key[value]
+        if key and not usedKeys[key] then return key,value end
+    end
+    local key,label=available(name)
+    if not key then key,label=available(fallback) end
+    if not key then adapter.log("Shortcut unavailable for "..action.."; it remains available in the menu.");return end
+    usedKeys[key]=action
+    local unrealName=({INS="Insert",HOME="Home"})[label] or label
+    RegisterKeyBind(key,function()request(action,unrealName)end)
 end
 
-local vehicleKeys=config.VehicleKeys or {Repair="F1",Next="F2",Diagnose="F3",God="F4",Drive="F5",Spawn="F9"}
-for name,action in pairs({Repair="repair",Next="cycleVehicle",Diagnose="diagnose",God="godmode",Drive="drive",Spawn="spawnVehicle"}) do
-    local key=Key[vehicleKeys[name] or ""]
-    if key and not usedKeys[key] then
-        usedKeys[key]=true
-        RegisterKeyBind(key,function() request(action,vehicleKeys[name]) end)
-    else adapter.log("Vehicle key unavailable/already assigned: "..name.."; edit config.VehicleKeys to remap.") end
+-- Reserve these first, including with preserved pre-0.4.1 configurations.
+bind("F2","menu")
+bind("F3","cycleVehicle")
+local extraMenu=config.MenuKey
+if type(extraMenu)=="string" and extraMenu:upper()~="F2" and extraMenu:upper()~="INS" and extraMenu:upper()~="INSERT" then
+    bind(extraMenu,"menu")
 end
+local flightKeys=config.Keys or {}
+for _,item in ipairs({{"Toggle","toggle","F6"},{"Slower","slower","F7"},{"Faster","faster","F8"},{"Return","return","F10"}})do
+    local name=flightKeys[item[1]]
+    if name==nil then name=item[3] end
+    bind(name,item[2],item[3])
+end
+local vehicleKeys=config.VehicleKeys or {}
+for _,item in ipairs({{"Repair","repair","F1"},{"God","godmode","F4"},{"Drive","drive","F5"},{"Spawn","spawnVehicle","F9"},{"Diagnose","diagnose","HOME"}})do
+    local name=vehicleKeys[item[1]]
+    if name==nil then name=item[3] end
+    bind(name,item[2],item[3])
+end
+local extraCycle=vehicleKeys.Next
+if type(extraCycle)=="string" and extraCycle:upper()~="F2" and extraCycle:upper()~="F3" then bind(extraCycle,"cycleVehicle")end
 
 local menu=require("menu").new(require("menu_engine"),function()
     return {flying=controller:isEnabled(),god=protection.manual,protected=protection.landing or protection.flight,
-        speed=config.Speeds[controller.speedIndex],model=vehicles.catalog[vehicles.selected].name,driving=vehicles.driver~=nil,spawned=vehicles:count(),maximum=vehicles.maximum,boost=vehicles.boostSpeeds[vehicles.boostIndex]}
+        speed=config.Speeds[controller.speedIndex],model=vehicles.catalog[vehicles.selected].name,driving=vehicles.driver~=nil,spawned=vehicles:count(),boost=vehicles.boostSpeeds[vehicles.boostIndex],steering=vehicleEngine.invertSteering,steeringReady=vehicleEngine.steeringReady}
 end,request)
 adapter.onLog=function(message)menu:notice(message)end
-local menuName=config.MenuKey or "INS"
-if menuName=="INSERT" then menuName="INS" end -- compatibility with 0.3.0 configurations
-local menuKey=Key[menuName]
-if menuKey and not usedKeys[menuKey] then
-    usedKeys[menuKey]=true
-    RegisterKeyBind(menuKey,function()request("menu",menuName=="INS" and "Insert" or menuName)end)
-else adapter.log("Menu key unavailable/already assigned; edit config.MenuKey.") end
 local hookOk,hookError=pcall(require("menu_engine").register,function(hud)menu:frame(hud)end)
 if not hookOk then adapter.log("HUD menu callback unavailable; hotkeys remain active: "..tostring(hookError))end
 
@@ -72,6 +90,7 @@ LoopAsync(16, function()
                     elseif action == "previousVehicle" then vehicles:cycle(-1)
                     elseif action == "boostFaster" then vehicles:boost(1)
                     elseif action == "boostSlower" then vehicles:boost(-1)
+                    elseif action == "steering" then vehicleEngine.toggleSteering()
                     elseif action == "spawnVehicle" then vehicles:spawn()
                     elseif action == "godmode" then protection:toggle()
                     elseif action == "return" then controller:disable(true)
@@ -99,6 +118,18 @@ LoopAsync(16, function()
 end)
 
 if type(RegisterHook) == "function" then
+    local steerOk,steerError=pcall(RegisterHook,"/Script/PhysXVehicles.WheeledVehicleMovementComponent:SetSteeringInput",function(context,amount)
+        local ok,err=pcall(vehicleEngine.correctSteering,context,amount)
+        if not ok and not vehicleEngine.steeringWarning then vehicleEngine.steeringWarning=true;adapter.log("Steering correction unavailable: "..tostring(err))end
+    end)
+    vehicleEngine.steeringReady=steerOk
+    if not steerOk then adapter.log("Steering hook unavailable: "..tostring(steerError))end
+    for _,hook in ipairs({{"/Script/Engine.SceneComponent:SetVisibility","visible"},{"/Script/Engine.SceneComponent:SetHiddenInGame","hidden"},{"/Script/Engine.PrimitiveComponent:SetCollisionEnabled","collision"}})do
+        local ok,err=pcall(RegisterHook,hook[1],function(context,value)
+            pcall(require("player_vehicle").guardDoor,context,value,hook[2])
+        end)
+        if not ok then adapter.log("Door display guard unavailable: "..tostring(err))end
+    end
     for _,path in ipairs({"/Script/Engine.GameplayStatics:ApplyDamage","/Script/Engine.GameplayStatics:ApplyPointDamage"}) do
         local damageOk,damageError=pcall(RegisterHook,path,function(_,target,amount)
             if protection.manual or controller:isEnabled() or protection.landing then
@@ -125,4 +156,4 @@ if type(RegisterHook) == "function" then
     if not ok then adapter.log("Player restart hook unavailable; pawn-change cleanup remains active: " .. tostring(err)) end
 end
 
-adapter.log("Ready. INSERT menu; F1 repair/recover; F2 next vehicle; F3 diagnostics; F4 god; F5 enter/exit; F6 noclip; F7/F8 speed; F9 spawn; F10 return.")
+adapter.log("Ready. F2 menu; F3 next vehicle; Home diagnostics; F1 repair/recover; F4 god; F5 enter/exit; F6 noclip; F7/F8 speed; F9 spawn; F10 return.")

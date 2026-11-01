@@ -1,5 +1,5 @@
 {
-  "version": "0.4.0",
+  "version": "0.4.1",
   "log_sha256": "cd98db0c89ba82dea5c3c812cf614c69c4e49af85e1f09066adc375e95275b94",
   "scope": "Only class identities are recorded; original user log and game EXE are not redistributed.",
   "player_car": "/Game/Autok/Abel_Car.Abel_Car_C",
@@ -40,9 +40,24 @@
   "shared_profiles_game_runtime_tested": false,
   "shared_profile_limits": [
     "Loaded animated body required",
-    "Unit mesh scale",
+    "Finite positive authored mesh scale",
     "Matching wheel count from 2 through 8",
     "Unique existing wheel bones",
     "Construction must retain selected mesh/animation/physics/wheel setup"
-  ]
+  ],
+  "runtime_log_041_fix_sha256": "d57d4acf944a9c19ad44852f6314f3a36da4d16178650d55e3c1f884e3c35f85",
+  "runtime_040_observations": [
+    "Estate successfully spawned on the player template; supplied screenshot shows native speedometer/radio HUD.",
+    "Hatchback, liftback, luxury and both vans were rejected by the old unit-scale requirement.",
+    "No Insert menu request/failure was logged; F2 cycle callbacks were received.",
+    "User reports reversed A/D steering and an extra open door on a converted car."
+  ],
+  "changes_041": [
+    "Reserve F2 menu/F3 cycle/Home diagnostics even for preserved old configs; log request and first rendered frame.",
+    "Remove trainer spawn cap; ignore old MaxVehicles values.",
+    "Preserve finite positive per-axis source scale in construction defaults; do not resize profiled actors after physics creation.",
+    "Intercept native SetSteeringInput for converted cars controlled by the local player only; default correction on, menu/config toggle.",
+    "Hide extra door-named mesh components or door-asset mesh components on converted cars; guard visibility/hidden/collision setters against reappearance."
+  ],
+  "converted_estate_native_hud_user_observed": true
 }

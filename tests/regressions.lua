@@ -237,14 +237,19 @@ local function engine()
         table.insert(f.events,name)
     end
     local function valid(self)guard('IsValid');return self.valid~=false end
-    f.pc={valid=true,localController=true}
+    f.pc={valid=true,localController=true,bShowMouseCursor=false}
     f.pawn={valid=true}
     f.movement={valid=true,MovementMode=1,CustomMovementMode=0}
     f.pawn.CharacterMovement=f.movement;f.pc.Pawn=f.pawn
     f.pc.IsValid=valid;f.pawn.IsValid=valid;f.movement.IsValid=valid
+    function f.pc:GetAddress()guard('GetAddress');return 0x5000 end
+    function f.pc:GetFullName()guard('GetFullName');return 'PlayerController /World.PC'end
     function f.pc:IsLocalController()guard('IsLocalController');return self.localController end
-    function f.pc:IsMoveInputIgnored()guard('IsMoveInputIgnored');return f.ignored or false end
-    function f.pc:IsLookInputIgnored()guard('IsLookInputIgnored');return false end
+    function f.pc:IsMoveInputIgnored()guard('IsMoveInputIgnored');return f.ignored or (f.moveLocks or 0)>0 end
+    function f.pc:IsLookInputIgnored()guard('IsLookInputIgnored');return (f.lookLocks or 0)>0 end
+    function f.pc:SetIgnoreMoveInput(value)guard('SetIgnoreMoveInput');f.moveLocks=(f.moveLocks or 0)+(value and 1 or -1)end
+    function f.pc:SetIgnoreLookInput(value)guard('SetIgnoreLookInput');f.lookLocks=(f.lookLocks or 0)+(value and 1 or -1)end
+    function f.pc:GetMousePosition()guard('GetMousePosition');return false end
     function f.pc:GetControlRotation()guard('GetControlRotation');return f.rotation end
     function f.pc:IsInputKeyDown(key)
         guard('IsInputKeyDown')
@@ -279,15 +284,17 @@ local function engine()
     function f.statics:GetTimeSeconds(context)guard('GetTimeSeconds');assert(context==f.pawn,'world context must be pawn');return f.clock end
     function f.statics:IsGamePaused(context)guard('IsGamePaused');assert(context==f.pawn,'pause requires world context');return f.paused or false end
     function f.load()
-        package.loaded.adapter=nil;package.loaded.vehicle_engine=nil
-        Key={INS=45,F1=112,F2=113,F3=114,F4=115,F5=116,F6=117,F7=118,F8=119,F9=120,F10=121};EFindName={FNAME_Find=0}
-        FindAllOf=function(name)guard('FindAllOf');assert(name=='PlayerController');return f.controllers or {f.pc} end
+        package.loaded.adapter=nil;package.loaded.vehicle_engine=nil;package.loaded.menu_engine=nil
+        Key={HOME=36,INS=45,F1=112,F2=113,F3=114,F4=115,F5=116,F6=117,F7=118,F8=119,F9=120,F10=121};EFindName={FNAME_Find=0}
+        FindAllOf=function(name)guard('FindAllOf');if name=='HUD' then return f.huds or {}end;assert(name=='PlayerController');return f.controllers or {f.pc} end
         StaticFindObject=function(path)guard('StaticFindObject');assert(path=='/Script/Engine.Default__GameplayStatics');return f.statics end
         FName=function(name,mode)
             guard('FName');assert(type(name)=='string' and mode==EFindName.FNAME_Find,'input names must use find-only FName lookup')
             return {ToString=function()return f.missingKey==name and 'None' or name end}
         end
         RegisterKeyBind=function(key,callback)assert(not f.registry[key],'duplicate key registration');f.registry[key]=callback end
+        f.hudCallbacks={}
+        RegisterCustomEvent=function(name,callback)f.hudCallbacks[name]=callback end
         ExecuteInGameThread=function(callback)
             if f.failQueue then error('simulated loader scheduling failure') end
             table.insert(f.queue,callback)
@@ -297,7 +304,15 @@ local function engine()
         RegisterHook=function(path,callback)
             if path=='/Script/Engine.PlayerController:ClientRestart' then f.restart=callback
             else
-                assert(path=='/Script/Engine.GameplayStatics:ApplyDamage' or path=='/Script/Engine.GameplayStatics:ApplyPointDamage','only documented native damage guards are added')
+                local allowed={
+                    ['/Script/Engine.GameplayStatics:ApplyDamage']=true,
+                    ['/Script/Engine.GameplayStatics:ApplyPointDamage']=true,
+                    ['/Script/PhysXVehicles.WheeledVehicleMovementComponent:SetSteeringInput']=true,
+                    ['/Script/Engine.SceneComponent:SetVisibility']=true,
+                    ['/Script/Engine.SceneComponent:SetHiddenInGame']=true,
+                    ['/Script/Engine.PrimitiveComponent:SetCollisionEnabled']=true,
+                }
+                assert(allowed[path],'only documented native input/visibility/damage setters are hooked')
                 f.damageHooks=f.damageHooks or {};f.damageHooks[path]=callback
             end
             return 1,2
@@ -319,12 +334,12 @@ end
 case('new vehicle keys are queued and failed diagnostics cannot drop active flight',function()
     local f=engine();f.load()
     check(f.registry[Key.F1] and f.registry[Key.F2] and f.registry[Key.F5] and f.registry[Key.F9],'repair, select, driving and spawn keys registered')
-    check(f.registry[Key.F3] and f.registry[Key.F4],'diagnostic and god-mode keys registered')
-    check(f.registry[Key.INS] and Key.INSERT==nil,'Insert uses the real stable-loader INS key, not a nonexistent INSERT enum')
+    check(f.registry[Key.HOME] and f.registry[Key.F4],'Home diagnostic and god-mode keys registered')
+    check(f.registry[Key.F2] and f.registry[Key.F3] and not f.registry[Key.INS],'F2 menu and F3 selection replace the old Insert binding')
     f.press('F6');f.step(0)
     f.press('F5');f.step(0.01);check(not f.pawn.collision,'driving request cannot capture an active noclip pawn')
-    f.press('F3');f.step(0.01);check(not f.pawn.collision,'diagnostic read failure leaves flight active')
-    f.press('F2');f.step(0.01);check(not f.pawn.collision,'vehicle selection does not mutate player physics')
+    f.press('HOME');f.step(0.01);check(not f.pawn.collision,'diagnostic read failure leaves flight active')
+    f.press('F3');f.step(0.01);check(not f.pawn.collision,'vehicle selection does not mutate player physics')
     f.pawn.bCanBeDamaged=true;f.press('F4');f.step(0.01);check(f.pawn.bCanBeDamaged==false,'god mode key disables the actual player damage property')
     f.inGame=true;f.restart();f.inGame=false;f.step(0.01);check(f.pawn.bCanBeDamaged==false,'manual god mode remains requested across player restarts and vehicle possession')
     f.finish()
@@ -347,6 +362,24 @@ case('native pre-damage guard suppresses protected-player damage before health p
     f.inGame=false;f.finish()
 end)
 
+case('F2 reaches the real HUD renderer and closes without leaving input locked',function()
+    local f=engine();f.load()
+    local hud={PlayerOwner=f.pc,Canvas={SizeX=1280,SizeY=768,IsValid=function()return true end}}
+    function hud:IsValid()return true end
+    function hud:GetClass()return {GetFullName=function()return 'BlueprintGeneratedClass /Game/UI/HUD_Shooter.HUD_Shooter_C'end}end
+    function hud:DrawRect()assert(f.inGame);f.menuRects=(f.menuRects or 0)+1 end
+    function hud:DrawText(text)assert(f.inGame);if text=='LOST BUDAPEST' then f.menuTitle=true end end
+    f.huds={hud};f.press('F2');f.step(0)
+    check(type(f.hudCallbacks.ExecuteUbergraph_HUD_Shooter)=='function' and not f.pc.bShowMouseCursor,'F2 schedules the menu and registers the loaded HUD without premature input capture')
+    f.inGame=true;f.hudCallbacks.ReceiveDrawHUD({get=function()return hud end});f.inGame=false
+    check(f.menuTitle and f.menuRects>0 and f.pc.bShowMouseCursor and f.moveLocks==1 and f.lookLocks==1,'the real adapter draws through the local HUD and captures controls once')
+    f.press('F2');f.step(.02)
+    check(not f.pc.bShowMouseCursor and f.moveLocks==0 and f.lookLocks==0,'F2 closes the rendered menu and restores both input counters')
+    local drawn=false;for _,message in ipairs(f.logs)do if message:find('Trainer menu drawn successfully.',1,true)then drawn=true end end
+    check(drawn,'log distinguishes an actually drawn frame from a menu request')
+    f.finish()
+end)
+
 case('held hotkeys cannot repeatedly toggle god mode',function()
     local f=engine();f.load();f.pawn.bCanBeDamaged=true
     f.pressed.F4=true;f.press('F4');f.step(0)
@@ -363,10 +396,18 @@ case('held hotkeys cannot repeatedly toggle god mode',function()
     f.finish()
 end)
 
-case('saved INSERT spelling remains compatible with the actual INS enum',function()
-    local previous=Config.MenuKey;Config.MenuKey='INSERT'
-    local f=engine();f.load();check(type(f.registry[Key.INS])=='function','preserved 0.3.0 config registers the Insert alias correctly')
-    f.finish();Config.MenuKey=previous
+case('preserved old shortcuts migrate to the reserved F2 menu and F3 selection',function()
+    local previous,oldKeys=Config.MenuKey,Config.VehicleKeys
+    Config.MenuKey='INSERT';Config.VehicleKeys={Next='F2',Diagnose='F3'}
+    local f=engine();f.load()
+    check(type(f.registry[Key.F2])=='function' and type(f.registry[Key.F3])=='function' and type(f.registry[Key.HOME])=='function' and not f.registry[Key.INS],'preserved old bindings cannot steal F2/F3 and diagnostics fall back to Home')
+    f.press('F3');f.step(0)
+    local selected=false;for _,m in ipairs(f.logs)do if m:find('Selected vehicle:',1,true) then selected=true end end
+    check(selected,'F3 reaches car selection with the old config')
+    f.press('F2');f.step(.02)
+    local wrong=false;for _,m in ipairs(f.logs)do if m:find('Selected vehicle: Hatchback',1,true) then wrong=true end end
+    check(not wrong,'F2 cannot cycle another model after migration')
+    f.finish();Config.MenuKey,Config.VehicleKeys=previous,oldKeys
 end)
 
 case('player custom health and lethal falling speed are guarded without resurrecting dead pawns',function()

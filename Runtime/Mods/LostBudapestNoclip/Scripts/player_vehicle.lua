@@ -1,6 +1,8 @@
 -- Build a selected body on Abel's native player vehicle before physics creation.
 -- Read source templates only. Restore every temporary player-template edit.
 local Profile={};Profile.__index=Profile
+local hiddenDoors={}
+local convertedCars={}
 local function valid(v)return v~=nil and v:IsValid()end
 local function objectName(v)return valid(v) and v:GetFullName() or nil end
 local function finite(v)return type(v)=='number' and v==v and math.abs(v)<1000000 end
@@ -44,7 +46,7 @@ local function readSource(source)
     if valid(instance) then animation=instance:GetClass()end
     assert(valid(body) and valid(animation) and mesh.AnimationMode==0,'This model needs an animated vehicle body')
     local scale=vector(mesh.RelativeScale3D)
-    assert(math.abs(scale.X-1)<.001 and math.abs(scale.Y-1)<.001 and math.abs(scale.Z-1)<.001,'This model needs a separate scale mapping')
+    assert(scale.X>0 and scale.Y>0 and scale.Z>0,'Mirrored or zero-scale vehicle rigs are unsupported')
     local wheels=wheelData(movement,mesh)
     local count=mesh:GetNumMaterials()
     assert(count>=0 and count<=32,'Unsupported vehicle material count')
@@ -60,7 +62,7 @@ local function readSource(source)
         end
         materials[i]=material
     end
-    return {mesh=mesh,body=body,animation=animation,wheels=wheels,materials=materials,materialCount=count}
+    return {mesh=mesh,body=body,animation=animation,scale=scale,wheels=wheels,materials=materials,materialCount=count}
 end
 local function selectSource(class)
     -- Prefer a real traffic instance: ConstructionScript may choose the final
@@ -91,10 +93,12 @@ function Profile.new(sourceClass,playerClass)
     local playerWheels=wheelData(nativeMovement,target,false)
     assert(#sourceWheels==#playerWheels,'This model has an incompatible player wheel count')
     local materialCount,materials=selected.materialCount,selected.materials
-    local self=setmetatable({body=body,animation=animation,physics=mesh.PhysicsAssetOverride,wheels=sourceWheels,materials=materials,materialCount=materialCount,changes={}},Profile)
+    local self=setmetatable({body=body,animation=animation,physics=mesh.PhysicsAssetOverride,scale=selected.scale,wheels=sourceWheels,materials=materials,materialCount=materialCount,changes={}},Profile)
     local function change(object,key,value)
         self.changes[#self.changes+1]={object=object,key=key,old=object[key],value=value}
     end
+    change(target,'RelativeScale3D',selected.scale)
+    self.changes[#self.changes].old=vector(target.RelativeScale3D)
     change(target,'SkeletalMesh',body)
     change(target,'AnimClass',animation)
     change(target,'AnimationMode',mesh.AnimationMode)
@@ -127,10 +131,72 @@ function Profile:restore()
     end
     if #errors>0 then error(table.concat(errors,'; '),0)end
 end
+local function doorName(object)
+    local name=(objectName(object) or ''):match('[^%.:/ ]+$') or ''
+    name=name:lower()
+    return (name:find('door',1,true) and not name:find('outdoor',1,true)) or name:find('ajt',1,true)
+end
+local function unwrap(value)
+    local ok,result=pcall(function()return value:get()end)
+    return ok and result or value
+end
+function Profile:hideExtraDoors(actor)
+    for key,record in pairs(hiddenDoors)do
+        if not valid(record.part) or not valid(record.actor) then hiddenDoors[key]=nil end
+    end
+    local class=StaticFindObject('/Script/Engine.MeshComponent')
+    assert(valid(class),'Mesh component metadata is unavailable')
+    local parts=actor:GetComponentsByClass(class)
+    local entries={}
+    if type(parts)=='table' then entries=parts
+    else for i=1,parts:GetArrayNum()do entries[i]=parts[i]end end
+    self.hiddenDoorCount=0
+    for _,entry in ipairs(entries)do
+        local part=unwrap(entry)
+        if valid(part) and objectName(part)~=objectName(actor.Mesh) and objectName(part:GetOwner())==objectName(actor) then
+            local hide=doorName(part)
+            for _,field in ipairs({'StaticMesh','SkeletalMesh'})do
+                if not hide then
+                    local ok,matched=pcall(function()local asset=part[field];return valid(asset) and doorName(asset)end)
+                    if ok then hide=matched end
+                end
+            end
+            if hide then
+                hiddenDoors[part:GetAddress()]={part=part,actor=actor,name=objectName(part),owner=objectName(actor)}
+                part:SetVisibility(false,true)
+                part:SetHiddenInGame(true,true)
+                part:SetCollisionEnabled(0)
+                self.hiddenDoorCount=self.hiddenDoorCount+1
+            end
+        end
+    end
+end
+function Profile.guardDoor(context,value,mode)
+    local part=context:get()
+    if not valid(part) then return false end
+    local key=part:GetAddress()
+    local record=hiddenDoors[key]
+    if not record then return false end
+    if not valid(record.actor) or objectName(part)~=record.name or objectName(part:GetOwner())~=record.owner then hiddenDoors[key]=nil;return false end
+    if mode=='hidden' then value:set(true)
+    elseif mode=='collision' then value:set(0)
+    else value:set(false)end
+    return true
+end
+function Profile.steeringTarget(actor)
+    if not valid(actor) then return false end
+    local key=actor:GetAddress()
+    local record=convertedCars[key]
+    if not record then return false end
+    if not valid(record.actor) or objectName(actor)~=record.name then convertedCars[key]=nil;return false end
+    return true
+end
 function Profile:validate(actor)
     assert(actor:GetClass():GetFullName()=='BlueprintGeneratedClass /Game/Autok/Abel_Car.Abel_Car_C','The spawned car is not the native player vehicle')
     local mesh,movement=actor.Mesh,actor.VehicleMovement
     assert(valid(mesh) and valid(movement),'The spawned car has no mesh/movement')
+    local actualScale=vector(mesh.RelativeScale3D)
+    for _,axis in ipairs({'X','Y','Z'})do assert(math.abs(actualScale[axis]-self.scale[axis])<=math.max(1e-6,self.scale[axis]*1e-4),'The game replaced the selected model scale before physics initialization')end
     assert(objectName(mesh.SkeletalMesh)==objectName(self.body) and objectName(mesh.AnimClass)==objectName(self.animation) and mesh.AnimationMode==0,'The game replaced the selected body or animation during construction')
     assert(objectName(mesh.PhysicsAssetOverride)==objectName(self.physics),'The game replaced the selected physics asset during construction')
     assert(sameWheels(wheelData(movement,mesh),self.wheels),'The game replaced the selected wheel setup during construction')
@@ -149,5 +215,8 @@ function Profile:validate(actor)
     local oldCount=mesh:GetNumMaterials()
     assert(oldCount>=0 and oldCount<=32,'Unsupported spawned material count')
     for i=0,math.max(oldCount,self.materialCount)-1 do mesh:SetMaterial(i,self.materials[i])end
+    self:hideExtraDoors(actor)
+    for key,record in pairs(convertedCars)do if not valid(record.actor) then convertedCars[key]=nil end end
+    convertedCars[actor:GetAddress()]={actor=actor,name=objectName(actor)}
 end
 return Profile

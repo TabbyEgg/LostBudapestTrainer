@@ -8,15 +8,15 @@ case('vehicle spawning uses real catalog classes, rejects blocked spawns and cle
     a.begin=function(c,cl,t)made=made+1;return{alive=true,cls=cl}end
     a.prepare=function(v)v.ready=true end;a.finish=function(v,t)assert(v.ready);return v end
     a.destroy=function(v)deleted=deleted+1;v.alive=false end
-    local v=Vehicles.new(a,{MaxVehicles=5})
-    check(Vehicles.new(a).maximum==10,'default spawn cap raised to ten; old configurations need no edits')
+    local v=Vehicles.new(a,{MaxVehicles=1})
+    check(v.maximum==nil,'legacy spawn limit settings are ignored')
     check(v.catalog[1].path=='/Game/Autok/Abel_Car.Abel_Car_C','default spawn is actual player car blueprint')
-    check(v:spawn() and #v.spawned==1,'completed vehicle tracked')
-    for i=1,4 do check(v:spawn(),'spawn within cap '..i)end
-    check(not v:spawn() and made==5,'five-vehicle cap prevents new native spawn')
-    v.spawned[1].alive=false;check(v:spawn(),'destroyed car releases cap slot')
+    local all=true
+    for i=1,100 do if not v:spawn() then all=false end end
+    check(all and made==100 and v:count()==100,'one hundred successful placements are tracked without a trainer cap')
+    v.spawned[1].alive=false;check(v:spawn() and v:count()==100,'destroyed cars are pruned while new spawns remain unlimited')
     local other=Vehicles.new(a);a.class=function()return nil end
-    check(not other:spawn() and made==6,'unloaded class never calls spawn')
+    check(not other:spawn() and made==101,'unloaded class never calls spawn')
     a.class=function(p)return p end;a.finish=function()return nil end
     check(not other:spawn() and deleted==1 and #other.spawned==0,'failed construction deletes only newly created car')
     a.begin=function()return nil end
@@ -55,6 +55,33 @@ case('trainer driving validates entry, rolls back failure and restores on exit',
     a.exitDriver=function()return true end;check(v:drive() and v.driver==nil,'F5 can retry paused driver cleanup')
     a.repairTarget=function()return nil end
     check(not v:repair(),'repair never touches an unowned distant vehicle')
+end)
+case('steering correction applies to converted player cars through the native input setter',function()
+    local oldAdapter,oldEngine,oldProfile=package.loaded.adapter,package.loaded.vehicle_engine,package.loaded.player_vehicle
+    local config=require('config');local oldSetting=config.InvertVehicleSteering
+    local converted={IsValid=function()return true end,GetAddress=function()return 12 end,GetFullName=function()return 'ConvertedCar'end}
+    local other={IsValid=function()return true end,GetAddress=function()return 13 end,GetFullName=function()return 'OtherCar'end}
+    local owner=converted;local pawn=converted
+    local component={IsValid=function()return true end,GetOwner=function()return owner end}
+    local amount={value=1,get=function(self)return self.value end,set=function(self,v)self.value=v end}
+    package.loaded.adapter={log=function()end,playerContext=function()return {pawn=pawn}end}
+    package.loaded.player_vehicle={steeringTarget=function(actor)return actor==converted end}
+    package.loaded.vehicle_engine=nil;config.InvertVehicleSteering=nil
+    local ok,err=pcall(function()
+        local e=require('vehicle_engine')
+        check(e.correctSteering({get=function()return component end},amount) and amount.value==-1,'normal game F-entry steering is corrected without a trainer driver state')
+        amount.value=-.5;e.correctSteering({get=function()return component end},amount)
+        check(amount.value==.5,'both directions and analog values retain magnitude')
+        owner=other;amount.value=.4
+        check(not e.correctSteering({get=function()return component end},amount) and amount.value==.4,'NPC movement inputs remain untouched')
+        pawn=other
+        check(not e.correctSteering({get=function()return component end},amount) and amount.value==.4,'the original native car and unconverted vehicles keep their original steering')
+        pawn=converted;owner=converted;e.toggleSteering();amount.value=1
+        check(not e.correctSteering({get=function()return component end},amount) and amount.value==1,'menu toggle restores original steering immediately')
+    end)
+    config.InvertVehicleSteering=oldSetting
+    package.loaded.adapter,package.loaded.vehicle_engine,package.loaded.player_vehicle=oldAdapter,oldEngine,oldProfile
+    if not ok then error(err)end
 end)
 case('native vehicle adapter uses native spawn helper, health guard and reversible possession',function()
     local previousAdapter,previousEngine=package.loaded.adapter,package.loaded.vehicle_engine

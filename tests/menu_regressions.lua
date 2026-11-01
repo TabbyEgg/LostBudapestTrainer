@@ -5,7 +5,7 @@ local function fixture()
     local api={log=function(m)f.logs[#f.logs+1]=m end}
     function api.context()return f.unavailable and nil or {}end
     function api.current()return f.current end
-    function api.hud()if not f.noHUD then return {},1280,729 end end
+    function api.hud()if not f.noHUD then return {},1280,768 end end
     function api.capture()return{}end
     function api.lock()f.locks=f.locks+1;if f.failLock then error('partial input lock')end end
     function api.unlock()f.unlocks=f.unlocks+1 end
@@ -45,6 +45,7 @@ case('menu errors restore input and messages remain read-only notifications',fun
     local toast=fixture();toast.menu:notice('Vehicle spawn failed: test');toast.frame()
     check(toast.draws>0 and toast.locks==0 and #toast.requests==0,'closed-menu error notification draws without touching player input')
     local rows=toast.menu:rows()
+    check(rows[8].value:find('0 spawned',1,true) and not rows[8].value:find('/',1,true) and rows[12].value=='F2 / Backspace','menu has no spawn-cap denominator and advertises F2')
     check(rows[6].label=='Vehicle boost' and rows[6].value:find('OFF',1,true),'menu exposes vehicle boost and its off state')
     check(rows[1].value=='ON' and rows[2].value=='AUTO GUARD' and rows[3].value:find('6 m/s',1,true),'menu displays current flight, landing protection and selected speed')
 end)

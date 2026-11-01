@@ -42,6 +42,7 @@ local function fixture()
         return setmetatable({GetArrayNum=function()return #entries end},{__index=function(_,i)return entries[i]end,
             __newindex=function()error('wheel arrays must never be resized/reassigned')end}),entries
     end
+    f.object=object
     f.nativeBody=body('SkeletalMesh /Game/Abel.Body','AbelWheel')
     f.selectedBody=body('SkeletalMesh /Game/Hatch.Body','HatchWheel')
     f.nativeAnimation=object('AnimBlueprintGeneratedClass /Game/Abel.Anim_C')
@@ -69,11 +70,30 @@ local function fixture()
     function f.pawn:SetActorEnableCollision(v)self.collision=v end
     f.pc=object('LocalController');f.pc.Pawn=f.pawn
     f.originalCheats=object('OriginalCheats');f.pc.CheatManager=f.originalCheats
+    f.meshClass=object("Class /Script/Engine.MeshComponent")
     f.cheatClass=object('Class /Script/Engine.CheatManager');f.cheats=object('SpawnHelper')
     function f.clone()
         local a=object('NewPlayerCar');a.Mesh=mesh('NewPlayerMesh',f.player.Mesh.SkeletalMesh,f.player.Mesh.AnimClass,
             f.player.Mesh.PhysicsAssetOverride,{f.nativeMaterial,f.nativeMaterial})
         a.Mesh.AnimationMode=f.player.Mesh.AnimationMode
+        local scale=f.player.Mesh.RelativeScale3D
+        a.Mesh.RelativeScale3D={X=scale.X,Y=scale.Y,Z=scale.Z}
+        function a.Mesh:GetOwner()return a end
+        a.components={a.Mesh}
+        function a:GetComponentsByClass(class)assert(class==f.meshClass);return self.components end
+        if f.doors then
+            local door=object('StaticMeshComponent /World.NewCar.DoorLeft')
+            door.visible=true;door.hidden=false;door.collision=1
+            function door:GetOwner()return a end
+            function door:SetVisibility(v,propagate)assert(propagate);self.visible=v end
+            function door:SetHiddenInGame(v,propagate)assert(propagate);self.hidden=v end
+            function door:SetCollisionEnabled(v)self.collision=v end
+            local driver=object('SkeletalMeshComponent /World.NewCar.Driver')
+            function driver:GetOwner()return a end
+            function driver:SetVisibility()error('driver must stay visible')end
+            a.door=door;a.driver=driver
+            a.components={a.Mesh,{get=function()return door end},{get=function()return driver end}}
+        end
         a.VehicleMovement=object('NewPlayerMovement')
         local entries={}
         for i=1,4 do
@@ -82,7 +102,7 @@ local function fixture()
         end
         a.VehicleMovement.WheelSetups=setmetatable({GetArrayNum=function()return #entries end},{__index=entries})
         function a:GetClass()return f.playerClass end
-        function a:K2_SetActorRotation()end;function a:SetActorScale3D()end
+        function a:K2_SetActorRotation()end;function a:SetActorScale3D()f.lateScale=(f.lateScale or 0)+1 end
         function a:K2_SetActorLocation(v)self.position=v;return true end
         function a:K2_GetActorLocation()return self.position end
         function a:K2_DestroyActor()self.alive=false end
@@ -91,7 +111,8 @@ local function fixture()
     function f.cheats:Summon(path)
         assert(path=='/Game/Autok/Abel_Car.Abel_Car_C')
         f.summons=f.summons+1
-        f.profileSeenBeforeConstruction=f.player.Mesh.SkeletalMesh==f.selectedBody and f.playerWheels[1].BoneName:ToString()=='HatchWheel1'
+        f.profileSeenBeforeConstruction=f.player.Mesh.SkeletalMesh==f.selectedBody and f.player.Mesh.RelativeScale3D.X==1 and f.player.Mesh.RelativeScale3D.Y==1 and f.player.Mesh.RelativeScale3D.Z==1
+            and f.playerWheels[1].BoneName:ToString()=='HatchWheel1'
         if f.failSummon then error('engine spawn failed')end
         local a=f.clone()
         if f.overwriteBody then a.Mesh.SkeletalMesh=f.nativeBody end
@@ -106,7 +127,7 @@ local function fixture()
     end
     f.oldFind,f.oldStatic,f.oldConstruct=FindAllOf,StaticFindObject,StaticConstructObject
     FindAllOf=function(kind)assert(kind=='WheeledVehicle');return f.actors end
-    StaticFindObject=function(path)assert(path=='/Script/Engine.CheatManager');return f.cheatClass end
+    StaticFindObject=function(path)if path=='/Script/Engine.MeshComponent' then return f.meshClass end;assert(path=='/Script/Engine.CheatManager');return f.cheatClass end
     StaticConstructObject=function(class,outer)assert(class==f.cheatClass and outer==f.pc);return f.cheats end
     function f.spawn(profile)
         return require('native_spawn').actor({controller=f.pc,pawn=f.pawn},f.playerClass,
@@ -152,12 +173,47 @@ case('incompatible source rigs are refused before template edits or native spawn
         check(f.defaultsRestored(),'animation refusal preserves the player defaults')
     end)
     runFixture(function(f)
-        f.source.Mesh.RelativeScale3D={X=2,Y=2,Z=2}
-        check(not pcall(Profile.new,f.sourceClass,f.playerClass),'unsupported body scale is rejected rather than stretching stock wheels')
+        f.source.Mesh.RelativeScale3D={X=-1,Y=1,Z=1}
+        check(not pcall(Profile.new,f.sourceClass,f.playerClass),'mirrored source scale is refused before native construction')
     end)
     runFixture(function(f)
         f.player.VehicleMovement.WheelSetups.GetArrayNum=function()return 3 end
         check(not pcall(Profile.new,f.sourceClass,f.playerClass),'different wheel counts never resize native arrays')
+    end)
+end)
+case('authored source scale is installed before construction without late physics resizing',function()
+    for _,scale in ipairs({{X=.01,Y=.01,Z=.01},{X=2,Y=3,Z=4}})do
+        runFixture(function(f)
+            f.source.Mesh.RelativeScale3D=scale
+            local actor=f.spawn(Profile.new(f.sourceClass,f.playerClass))
+            check(actor.Mesh.RelativeScale3D.X==scale.X and actor.Mesh.RelativeScale3D.Y==scale.Y and actor.Mesh.RelativeScale3D.Z==scale.Z,'spawn keeps positive authored per-axis scale')
+            check(not f.lateScale and f.defaultsRestored(),'no late actor/physics resizing and exact template scale restored')
+        end)
+    end
+    for _,scale in ipairs({{X=0,Y=1,Z=1},{X=0/0,Y=1,Z=1},{X=math.huge,Y=1,Z=1}})do
+        runFixture(function(f)
+            f.source.Mesh.RelativeScale3D=scale
+            check(not pcall(Profile.new,f.sourceClass,f.playerClass) and f.summons==0 and f.defaultsRestored(),'zero/nonfinite source scale cannot modify defaults or create an actor')
+        end)
+    end
+end)
+case('converted models hide only the extra door components and keep them hidden after entry',function()
+    runFixture(function(f)
+        f.doors=true
+        local actor=f.spawn(Profile.new(f.sourceClass,f.playerClass))
+        check(not actor.door.visible and actor.door.hidden and actor.door.collision==0,'separate original door panel and its collision are disabled')
+        check(actor.Mesh.SkeletalMesh==f.selectedBody and actor.driver.alive,'selected body and driver are retained')
+        local amount={value=true,get=function(self)return self.value end,set=function(self,v)self.value=v end}
+        check(Profile.guardDoor({get=function()return actor.door end},amount,'visible') and amount.value==false,'opening and exit animation cannot make the original panel visible')
+        amount.value=false;Profile.guardDoor({get=function()return actor.door end},amount,'hidden')
+        check(amount.value==true,'hidden-in-game calls cannot reveal the extra panel')
+        amount.value=3;Profile.guardDoor({get=function()return actor.door end},amount,'collision')
+        check(amount.value==0,'door collision cannot be reenabled by exit logic')
+        amount.value=true
+        check(not Profile.guardDoor({get=function()return actor.driver end},amount,'visible') and amount.value==true,'untracked components and scene doors stay untouched')
+        check(Profile.steeringTarget(actor) and not Profile.steeringTarget(f.pawn),'only converted spawned cars qualify for the steering correction')
+        actor.alive=false
+        check(not Profile.steeringTarget(actor),'destroyed converted cars are not valid correction targets')
     end)
 end)
 case('partial template changes and failed construction always restore the native setup',function()

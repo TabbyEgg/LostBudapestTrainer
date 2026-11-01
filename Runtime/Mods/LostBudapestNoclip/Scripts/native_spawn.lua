@@ -62,7 +62,8 @@ function Spawn.actor(ctx,class,transform,kind,profile)
         local q=transform.Rotation
         local yaw=math.deg(2*math.atan(q.Z,q.W))
         actor:K2_SetActorRotation({Pitch=0,Yaw=yaw,Roll=0},true)
-        actor:SetActorScale3D({X=1,Y=1,Z=1})
+        -- Profile scale was installed before physics creation; do not reset it afterward.
+        if not profile then actor:SetActorScale3D({X=1,Y=1,Z=1})end
         local placed=false
         for _,target in ipairs(transform.Candidates or {transform.Translation}) do
             actor:K2_SetActorLocation(target,true,{},true)

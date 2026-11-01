@@ -1,7 +1,7 @@
 -- All calls are made by main.lua on the game thread. No guessed memory offsets.
 local adapter=require("adapter")
 local config=require("config")
-local Engine={log=adapter.log}
+local Engine={log=adapter.log,invertSteering=config.InvertVehicleSteering~=false,steeringReady=false}
 local function number(v)return type(v)=="number" and v==v and v~=math.huge and v~=-math.huge end
 local function vector(v)return v and number(v.X) and number(v.Y) and number(v.Z) end
 local function rotation(v)return v and number(v.Pitch) and number(v.Yaw) and number(v.Roll) end
@@ -17,6 +17,25 @@ end
 function Engine.class(path)
     local class=StaticFindObject(path)
     if Engine.valid(class) then return class end
+end
+function Engine.toggleSteering()
+    Engine.invertSteering=not Engine.invertSteering
+    Engine.log(Engine.invertSteering and "Steering correction on." or "Steering correction off; original game steering restored.")
+end
+function Engine.correctSteering(context,amount)
+    if not Engine.invertSteering then return false end
+    local component=context:get()
+    if not Engine.valid(component) then return false end
+    local owner=component:GetOwner()
+    local ctx=adapter.playerContext()
+    if not ctx or not Engine.valid(owner) or owner:GetAddress()~=ctx.pawn:GetAddress() or owner:GetFullName()~=ctx.pawn:GetFullName() then return false end
+    -- Only swapped traffic bodies need this correction. Leave the original
+    -- Abel car, other game vehicles and NPC steering untouched.
+    if not require("player_vehicle").steeringTarget(owner) then return false end
+    local value=amount:get()
+    if not number(value) then return false end
+    amount:set(-value)
+    return true
 end
 function Engine.spawnTransform(ctx)
     local position=ctx.pawn:K2_GetActorLocation()
