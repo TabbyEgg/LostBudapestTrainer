@@ -1,5 +1,5 @@
 {
-  "version": "0.4.2",
+  "version": "0.4.3",
   "log_sha256": "cd98db0c89ba82dea5c3c812cf614c69c4e49af85e1f09066adc375e95275b94",
   "scope": "Only class identities are recorded; original user log and game EXE are not redistributed.",
   "player_car": "/Game/Autok/Abel_Car.Abel_Car_C",
@@ -68,5 +68,18 @@
     "disabled_log": "Same loader completes initialization, records trainer disabled, and starts event loop; user confirms level runs fine.",
     "root_cause_status": "Trainer regression isolated by user. Exact native failing call not established by supplied log.",
     "recovery_change": "Remove all four new engine-wide setter hooks; replace with game-thread maintenance after successful converted trainer spawn, with no startup world access."
-  }
+  },
+  "menu_spawn_042_log_sha256": "9ba750dcd4152c5361d54302e2e17dabe90070e7f2034a70633cdfaea07e98fa",
+  "menu_spawn_042_observations": [
+    "F2 requests logged but no Canvas draw success.",
+    "F3 cycles through Estate/Hatchback/Liftback/Luxury/Van selections in log; missing visible feedback made cycling unclear.",
+    "Abel car spawns successfully; Van 1 encounters opaque function-value errors during the native spawn wrapper.",
+    "Some Abel placements rejected by old 30cm tolerance after swept movement."
+  ],
+  "changes_043": [
+    "Native HUD text queue replaces Blueprint Canvas events; keyboard UI and short selection notices.",
+    "Collision-checked K2_TeleportTo destinations with bounded adjustment; forty candidate positions in all directions through 20m.",
+    "Cosmetic door hiding failure no longer discards a validated matched vehicle.",
+    "Spawn error messages identify application/construction/validation/placement stages."
+  ]
 }

@@ -51,6 +51,28 @@ case('stable-loader native spawn avoids FTransform marshaling and restores all t
         local spread={Translation=transform.Translation,Rotation=transform.Rotation,Candidates={{X=700,Y=0,Z=90},{X=1100,Y=0,Z=90}}}
         local recovered=spawn.actor(ctx,class,spread,'WheeledVehicle')
         check(recovered.position.X==1100,'blocked initial placement tries a clear alternative instead of counting a car stuck near the player')
+        helper.Summon=function(self,path)
+            summon(self,path)
+            created.K2_SetActorLocation=function()error('vehicle placement must not sweep through the path from the player')end
+            created.K2_TeleportTo=function(self,location,rotation)
+                assert(rotation.Pitch==0 and rotation.Roll==0 and rotation.Yaw==0)
+                if location.X==700 then return false end
+                self.position={X=location.X-140,Y=180,Z=location.Z+70};return true
+            end
+        end
+        local adjusted=spawn.actor(ctx,class,spread,'WheeledVehicle')
+        check(adjusted.position.X==960 and adjusted.position.Y==180,'collision-checked teleport accepts the engine adjusting the destination beyond the former 30cm tolerance')
+        helper.Summon=function(self,path)
+            summon(self,path)
+            created.K2_TeleportTo=function(self,location)self.position=location;return true end
+        end
+        local separated=spawn.actor(ctx,class,{Translation=spread.Translation,Rotation=spread.Rotation,Candidates=spread.Candidates,Origin={X=500,Y=0,Z=90}},'WheeledVehicle')
+        check(separated.position.X==1100,'adjusted placement remains at least three metres from the player')
+        helper.Summon=function(self,path)
+            summon(self,path)
+            created.K2_TeleportTo=function(self,location)self.position=location;return false end
+        end
+        check(not pcall(spawn.actor,ctx,class,spread,'WheeledVehicle') and not created.alive,'a refused destination is never accepted merely because the actor position looks close')
         helper.Summon=function(self,path)summon(self,path);created.K2_SetActorLocation=function(self)self.position={X=0,Y=0,Z=0};return false end end
         check(not pcall(spawn.actor,ctx,class,spread,'WheeledVehicle') and not created.alive,'all blocked placements remove the failed spawn and never consume a visible-car slot')
         helper.Summon=summon
@@ -59,9 +81,16 @@ case('stable-loader native spawn avoids FTransform marshaling and restores all t
         fail=false;local move=helper.Summon
         helper.Summon=function()error(function()end)end
         local succeeded,message=pcall(spawn.actor,ctx,class,transform,'WheeledVehicle')
-        check(not succeeded and type(message)=='string' and message:find('stack traceback',1,true),'opaque native function errors become useful traced text')
+        check(not succeeded and type(message)=='string' and message:find('Spawn step native actor construction',1,true) and message:find('stack traceback',1,true),'opaque native function errors identify the failing construction step')
         check(pc.CheatManager==previousCheats and pawn.collision,'opaque native errors still release every temporary player change')
         helper.Summon=move
+        local restoredProfile=false
+        local badProfile={apply=function()error(function()end)end,restore=function()restoredProfile=true end}
+        succeeded,message=pcall(spawn.actor,ctx,class,transform,'WheeledVehicle',badProfile)
+        check(not succeeded and message:find('Spawn step apply selected body/wheel template',1,true) and restoredProfile,'opaque model-template failures retain their exact step and restore partial edits')
+        badProfile.apply=function()end;badProfile.validate=function()error(function()end)end;restoredProfile=false
+        succeeded,message=pcall(spawn.actor,ctx,class,transform,'WheeledVehicle',badProfile)
+        check(not succeeded and message:find('Spawn step validate selected body/wheel template',1,true) and restoredProfile and not created.alive,'model validation failures identify their step and delete only the rejected new car')
 
         helper.Summon=function(self,path)move(self,path);created.K2_SetActorLocation=function()error('placement refused')end end
         check(not pcall(spawn.actor,ctx,class,transform,'WheeledVehicle') and not created.alive and first.alive,'placement exception destroys only the newly created actor')

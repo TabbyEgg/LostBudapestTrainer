@@ -25,7 +25,7 @@ Run `python tools/package.py` to verify the recorded source identities and
 dependency bytes, regenerate the payload manifest and create the release ZIP.
 The game EXE and research toolchains are excluded from releases.
 
-Current results: **312 Lua assertions and 61 installer assertions pass**.
+Current results: **318 Lua assertions and 61 installer assertions pass**.
 The actual runtime payload was also installed and removed in an isolated
 filesystem fixture, leaving the original game EXE unchanged. The loader proxy
 exports every DWM function imported by the supplied game EXE.
@@ -36,7 +36,7 @@ picker or Windows PowerShell 5.1 session was executed. The initial build needs
 an in-game check; the reported assertion counts do not establish that it works
 in the actual game.
 
-Version 0.4.2 uses a temporary native vehicle template profile during synchronous
+Version 0.4.3 uses a temporary native vehicle template profile during synchronous
 actor construction. Model mesh/animation/physics and wheel data are installed
 before physics initialization, then the exact original template is restored.
 Cases exercise one-based UE4SS arrays without resizing, incompatible rigs,
@@ -66,3 +66,16 @@ The installer recovery exception accepts a changed mods.txt only when merging
 the trainer entry back on reproduces its exact prior recorded SHA256. Cases
 verify disabled-entry recovery and original uninstall backups, while unrelated
 mod-list edits still reject the update without changing files or the receipt.
+
+0.4.3 replaces the script-observed Canvas renderer with AHUD's native text queue.
+HUD.cpp PostRender calls DrawDebugTextList independently of ReceiveDrawHUD and
+bShowHUD. HUD.h declares AddDebugText/RemoveDebugText as native client RPCs with
+no DevelopmentOnly metadata. Their names, PC GetHUD/GetViewportSize/deprojection
+and K2_TeleportTo are present in the supplied shipping binary. Queued updates
+submit finite-duration text keyed to the local HUD actor, use flat FVector/FColor
+arguments and remove only that keyed entry. No global renderer hooks are added.
+The user log proves F2 requests and F3 selection but contains no old Canvas draw
+success; it also reports opaque Van 1 errors and strict placement rejection.
+This change has modeled native-boundary validation here, not a Windows engine
+run. Placement fixtures cover collision-adjusted TeleportTo destinations,
+player separation, refused destinations, staged failures and exact cleanup.

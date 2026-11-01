@@ -1,8 +1,9 @@
-## 0.4.2 — level-loading crash recovery
+## 0.4.3 — keyboard menu and easier vehicle placement
 
-- Remove the four engine-wide steering, visibility and collision setter hooks introduced in 0.4.1 after reports of a fatal error while loading the level.
-- Maintain extra-door hiding only for converted trainer cars through the existing queued game-thread update.
-- Apply the **Keyboard steering fix** only to the locally controlled converted car while A/D is held. No converted-car maintenance starts before one is spawned.
-- Keep **F2 menu**, **F3 model selection**, **F9 spawning**, unlimited trainer spawns and positive model-scale support.
+- Replace the missing F2 menu with an on-screen text menu: **Up/Down** select, **Left/Right** adjust, **Enter** activate, **F2/Backspace** close.
+- Show short action messages on screen, including the selected car when pressing **F3**. **F9** spawns it.
+- Search 40 spawn positions around you, up to 20 metres away. Check the destination directly and accept safe engine adjustments, so obstacles along the path no longer reject a clear spot.
+- Keep otherwise valid selected cars when cosmetic door hiding is unavailable, and report that separately.
+- Identify whether a model failed during template setup, construction, validation or placement. Physics-rig checks remain in place.
 
-Fully close the game and run **Update.cmd**. The update re-enables the trainer if you temporarily disabled it in `Mods\mods.txt`. Spawn a new car after entering the level.
+Close the game and run **Update.cmd**. The menu uses keyboard navigation; mouse clicks are not used. Vehicle models still need to be loaded in the current level.

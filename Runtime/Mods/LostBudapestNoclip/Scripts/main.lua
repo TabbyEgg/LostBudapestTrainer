@@ -58,8 +58,6 @@ local menu=require("menu").new(require("menu_engine"),function()
         speed=config.Speeds[controller.speedIndex],model=vehicles.catalog[vehicles.selected].name,driving=vehicles.driver~=nil,spawned=vehicles:count(),boost=vehicles.boostSpeeds[vehicles.boostIndex],steering=vehicleEngine.invertSteering}
 end,request)
 adapter.onLog=function(message)menu:notice(message)end
-local hookOk,hookError=pcall(require("menu_engine").register,function(hud)menu:frame(hud)end)
-if not hookOk then adapter.log("HUD menu callback unavailable; hotkeys remain active: "..tostring(hookError))end
 
 LoopAsync(16, function()
     if not queued and (#actions > 0 or controller:hasWork() or protection:hasWork() or vehicles:hasWork() or menu:hasWork() or vehicleEngine.hasConvertedWork() or next(heldKeys)~=nil) then

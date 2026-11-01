@@ -34,13 +34,13 @@ function Engine.spawnTransform(ctx)
     yaw=yaw%360
     local rad=math.rad(yaw)
     local candidates={}
-    for _,distance in ipairs({700,1100,1500}) do
-        for _,offset in ipairs({0,30,-30,60,-60}) do
+    for _,distance in ipairs({700,1100,1500,2000}) do
+        for _,offset in ipairs({0,30,-30,60,-60,90,-90,135,-135,180}) do
             local angle=rad+math.rad(offset)
             candidates[#candidates+1]={X=position.X+math.cos(angle)*distance,Y=position.Y+math.sin(angle)*distance,Z=position.Z+80}
         end
     end
-    return {Candidates=candidates,Translation={X=position.X+math.cos(rad)*700,Y=position.Y+math.sin(rad)*700,Z=position.Z+80},
+    return {Origin={X=position.X,Y=position.Y,Z=position.Z},Candidates=candidates,Translation={X=position.X+math.cos(rad)*700,Y=position.Y+math.sin(rad)*700,Z=position.Z+80},
         Rotation={X=0,Y=0,Z=math.sin(rad/2),W=math.cos(rad/2)},Scale3D={X=1,Y=1,Z=1}}
 end
 function Engine.begin(ctx,class,transform)
@@ -49,6 +49,7 @@ function Engine.begin(ctx,class,transform)
         local player=assert(Engine.class("/Game/Autok/Abel_Car.Abel_Car_C"),"Abel player vehicle must be loaded for this model")
         local profile=require("player_vehicle").new(class,player)
         local actor=require("native_spawn").actor(ctx,player,transform,"WheeledVehicle",profile)
+        if profile.doorWarning then Engine.log("Selected car spawned; extra-door hiding unavailable: "..profile.doorWarning)end
         Engine.maintenanceFailed=false
         return actor
     end

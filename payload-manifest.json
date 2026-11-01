@@ -4,7 +4,7 @@
     {
       "path": "Mods/LostBudapestNoclip/Scripts/adapter.lua",
       "size": 11202,
-      "sha256": "9d8c44550f9097b4266f8bf1c58b0450a4101ddfc248826be2a066df79ed1c8a"
+      "sha256": "1d675cb6cf2ffa725e9bb332079473b9167f13a27481bde5ea0cedd0598cfa0d"
     },
     {
       "path": "Mods/LostBudapestNoclip/Scripts/config.lua",
@@ -18,28 +18,28 @@
     },
     {
       "path": "Mods/LostBudapestNoclip/Scripts/main.lua",
-      "size": 8067,
-      "sha256": "5bb37297149c0ffacb927f7ab400931bc630623f6a412ba7ceab6dde7739c7eb"
+      "size": 7860,
+      "sha256": "175ada6e783474706159bc912328a4eea6d1304638bbe02c2171eba207fe8d85"
     },
     {
       "path": "Mods/LostBudapestNoclip/Scripts/menu.lua",
-      "size": 8016,
-      "sha256": "bf3885572b8424ec41e8dede28adb90b80d3549d11bd64de00a5bb81e3ea1086"
+      "size": 5264,
+      "sha256": "baebd38ab65788df372bc8bb59ff9b0c6a12c57c7db29dfbfe624ced1fa8023d"
     },
     {
       "path": "Mods/LostBudapestNoclip/Scripts/menu_engine.lua",
-      "size": 3680,
-      "sha256": "c7ecde8050e6a63220568605c6b60800204d65916eb48bb1fc6bfcd8a0bd230e"
+      "size": 3135,
+      "sha256": "02cd2ca1959410ceae40784247cef575cdc21ffb058db739f480b84da666812e"
     },
     {
       "path": "Mods/LostBudapestNoclip/Scripts/native_spawn.lua",
-      "size": 5005,
-      "sha256": "3231a6870e89d2f71eb7fb7c2c0cdcdd276c1f9ebb0189902a45083708c668aa"
+      "size": 6660,
+      "sha256": "aff8eb91ee277e014ebe2655ffe603c601a4c2e9e859370a03a66217d4c09ab7"
     },
     {
       "path": "Mods/LostBudapestNoclip/Scripts/player_vehicle.lua",
-      "size": 13033,
-      "sha256": "c416c4177bcc8da834d5885fe58bca5dd3f003f30746130db980871b7078f80a"
+      "size": 13418,
+      "sha256": "3557d69751326feda6f804c8e5c165b8de8ba6769b7f306281d823cc435e3e4c"
     },
     {
       "path": "Mods/LostBudapestNoclip/Scripts/protection.lua",
@@ -48,8 +48,8 @@
     },
     {
       "path": "Mods/LostBudapestNoclip/Scripts/vehicle_engine.lua",
-      "size": 21073,
-      "sha256": "f132dc00277aa7936fbcd553ab078f172e434b16f1302dca8b7d6a8b3a4debc6"
+      "size": 21274,
+      "sha256": "59124cecbffddf362b9719d8e04f5a7c59773227e19e70f353377ff3d9883cdc"
     },
     {
       "path": "Mods/LostBudapestNoclip/Scripts/vehicles.lua",

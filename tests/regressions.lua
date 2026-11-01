@@ -249,6 +249,9 @@ local function engine()
     function f.pc:IsLookInputIgnored()guard('IsLookInputIgnored');return (f.lookLocks or 0)>0 end
     function f.pc:SetIgnoreMoveInput(value)guard('SetIgnoreMoveInput');f.moveLocks=(f.moveLocks or 0)+(value and 1 or -1)end
     function f.pc:SetIgnoreLookInput(value)guard('SetIgnoreLookInput');f.lookLocks=(f.lookLocks or 0)+(value and 1 or -1)end
+    function f.pc:GetHUD()guard('GetHUD');return f.hud end
+    function f.pc:GetViewportSize(x,y)guard('GetViewportSize');x.SizeX=1280;y.SizeY=768 end
+    function f.pc:DeprojectScreenPositionToWorld(x,y,origin,direction)guard('Deproject');origin.X=0;origin.Y=0;origin.Z=100;direction.X=1;direction.Y=0;direction.Z=0;return true end
     function f.pc:GetMousePosition()guard('GetMousePosition');return false end
     function f.pc:GetControlRotation()guard('GetControlRotation');return f.rotation end
     function f.pc:IsInputKeyDown(key)
@@ -372,21 +375,19 @@ case('native pre-damage guard suppresses protected-player damage before health p
     f.inGame=false;f.finish()
 end)
 
-case('F2 reaches the real HUD renderer and closes without leaving input locked',function()
+case('F2 opens the native HUD menu without script drawing callbacks',function()
     local f=engine();f.load()
-    local hud={PlayerOwner=f.pc,Canvas={SizeX=1280,SizeY=768,IsValid=function()return true end}}
+    local hud={PlayerOwner=f.pc}
     function hud:IsValid()return true end
-    function hud:GetClass()return {GetFullName=function()return 'BlueprintGeneratedClass /Game/UI/HUD_Shooter.HUD_Shooter_C'end}end
-    function hud:DrawRect()assert(f.inGame);f.menuRects=(f.menuRects or 0)+1 end
-    function hud:DrawText(text)assert(f.inGame);if text=='LOST BUDAPEST' then f.menuTitle=true end end
-    f.huds={hud};f.press('F2');f.step(0)
-    check(type(f.hudCallbacks.ExecuteUbergraph_HUD_Shooter)=='function' and not f.pc.bShowMouseCursor,'F2 schedules the menu and registers the loaded HUD without premature input capture')
-    f.inGame=true;f.hudCallbacks.ReceiveDrawHUD({get=function()return hud end});f.inGame=false
-    check(f.menuTitle and f.menuRects>0 and f.pc.bShowMouseCursor and f.moveLocks==1 and f.lookLocks==1,'the real adapter draws through the local HUD and captures controls once')
+    function hud:GetAddress()return 0x6000 end
+    function hud:GetFullName()return 'HUD /World.HUD'end
+    function hud:AddDebugText(text,source,duration)assert(f.inGame and source==self and duration==.5);f.menuText=text end
+    function hud:RemoveDebugText(source,leave)assert(f.inGame and source==self and leave==false);f.menuCleared=true end
+    f.hud=hud;f.press('F2');f.step(0)
+    check(next(f.hudCallbacks)==nil and f.menuText and f.menuText:find('LOST BUDAPEST TRAINER',1,true),'F2 submits directly through native HUD without registering ReceiveDrawHUD/ubergraph events')
+    check(not f.pc.bShowMouseCursor and f.moveLocks==1 and f.lookLocks==1,'keyboard menu captures movement once without changing the cursor')
     f.press('F2');f.step(.02)
-    check(not f.pc.bShowMouseCursor and f.moveLocks==0 and f.lookLocks==0,'F2 closes the rendered menu and restores both input counters')
-    local drawn=false;for _,message in ipairs(f.logs)do if message:find('Trainer menu drawn successfully.',1,true)then drawn=true end end
-    check(drawn,'log distinguishes an actually drawn frame from a menu request')
+    check(f.menuCleared and f.moveLocks==0 and f.lookLocks==0,'F2 closes native text and restores both input counters')
     f.finish()
 end)
 

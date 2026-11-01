@@ -79,3 +79,10 @@ exclusion, pause/menu gating and isolated component failures.
 Installer recovery cases verify that re-enabling a disabled trainer entry must
 restore the previously owned mod-list bytes exactly. They also verify the
 original backup chain and reject unrelated mod-list edits without writes.
+
+0.4.3 exercises keyboard menu submission through the native HUD queue without
+Blueprint draw callbacks or a live Canvas, named scalar and flat-struct output
+parameters, exact AddDebugText flags, keyed cleanup, no startup polling, input
+edges and balanced locks on failed submission. Spawn checks exercise destination
+teleport adjustment, player separation, rejection cleanup and staged opaque
+errors. Cosmetic door API failure cannot invalidate a matched native vehicle.

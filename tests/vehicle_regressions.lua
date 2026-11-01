@@ -200,6 +200,7 @@ case('native vehicle adapter uses native spawn helper, health guard and reversib
     package.loaded.native_spawn={actor=function(ctx,cl,transform,kind)
         if cl==cameraClass then assert(ctx.controller==pc and ctx.pawn==vehicle and kind=='CameraActor');camera.alive=true;camera.updated=false;return camera end
         assert(ctx.pawn==player and ctx.controller==pc and cl==class and kind=='WheeledVehicle')
+        check(#transform.Candidates==40 and transform.Origin.X==playerPos.X,'destination search covers forty positions around the player with an explicit origin')
         check(math.abs(transform.Translation.Y-700)<0.001 and transform.Scale3D.X==1,'spawn placement is forward from player with unit scale')
         check(math.abs(transform.Rotation.Z^2+transform.Rotation.W^2-1)<0.001,'spawn rotation is normalized')
         return vehicle

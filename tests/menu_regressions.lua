@@ -1,92 +1,86 @@
 return function(check,case)
 local Menu=require('menu')
 local function fixture()
-    local f={input={},current=true,draws=0,locks=0,unlocks=0,requests={},logs={}}
+    local f={input={},current=true,presents=0,locks=0,unlocks=0,clears=0,requests={},logs={}}
     local api={log=function(m)f.logs[#f.logs+1]=m end}
-    function api.context()return f.unavailable and nil or {}end
+    function api.context()if not f.unavailable then return {}end end
     function api.current()return f.current end
-    function api.hud()if not f.noHUD then return {},1280,768 end end
     function api.capture()return{}end
     function api.lock()f.locks=f.locks+1;if f.failLock then error('partial input lock')end end
     function api.unlock()f.unlocks=f.unlocks+1 end
     function api.input()return f.input end
-    function api.rect()if f.failDraw then error('renderer unavailable')end;f.draws=f.draws+1 end
-    function api.text()end
+    function api.present(ctx,text,duration)
+        if f.failPresent then error('HUD unavailable')end
+        f.presents=f.presents+1;f.text=text;f.duration=duration
+    end
+    function api.clear()f.clears=f.clears+1 end
     f.menu=Menu.new(api,function()return {flying=true,god=false,protected=true,speed=600,model="Abel's car",driving=false}end,
         function(action)f.requests[#f.requests+1]={action=action,menuOpen=f.menu.open,unlocked=f.unlocks>0}end)
-    function f.frame(input)f.input=input or {};f.menu:frame({})end
+    function f.tick(input)f.input=input or {};f.menu:tick()end
     return f
 end
-case('menu opens only with a playable context and a working local HUD',function()
-    local f=fixture();f.menu:toggle();check(f.menu.open and f.locks==0,'opening defers input locks until a HUD actually draws')
-    f.noHUD=true;for i=1,181 do f.menu:tick()end
-    check(not f.menu.open and f.locks==0,'missing draw event times out without ever locking player input')
-    f.noHUD=false;f.menu:toggle();f.frame();check(f.locks==1 and f.menu.open,'first verified HUD frame captures input exactly once')
-    f.frame();check(f.locks==1,'later frames never stack additional ignore-input locks')
-    f.current=false;f.menu:tick();check(not f.menu.open and f.unlocks==1,'pawn/map transition releases the menu input lock')
+case('native text menu does not depend on a Blueprint canvas event',function()
+    local f=fixture();f.menu:notice('startup');check(not f.menu:hasWork() and f.presents==0,'startup messages never start world polling')
+    f.unavailable=true;f.menu:toggle();check(not f.menu.open and f.locks==0,'unplayable context cannot lock controls')
+    f.unavailable=false;f.menu:toggle();check(f.menu.open and f.locks==0,'opening waits for successful native text submission')
+    f.tick();check(f.presents==1 and f.locks==1 and f.text:find('LOST BUDAPEST TRAINER',1,true),'queued tick submits the menu without any HUD script callback')
+    check(f.text:find('> Noclip',1,true) and f.text:find('Vehicle model',1,true) and f.text:find('F3: next car',1,true),'native text includes selection, live features and car shortcut')
+    f.tick();check(f.locks==1,'refreshes never stack additional input locks')
+    f.current=false;f.tick();check(not f.menu.open and f.unlocks==1 and f.clears==1,'player change clears our text and restores controls')
 end)
-case('menu mouse and keyboard edges dispatch one action and release locks first',function()
-    local f=fixture();f.menu:toggle();f.frame({accept=true});check(#f.requests==0,'Enter held before opening cannot activate a feature')
-    f.frame({});f.frame({accept=true})
-    check(#f.requests==1 and f.requests[1].action=='toggle' and not f.requests[1].menuOpen and f.requests[1].unlocked,'noclip activation runs only after menu input is restored')
-    f.menu:toggle();f.frame({});f.frame({down=true});f.frame({});f.frame({down=true});f.frame({});f.frame({right=true});f.frame({right=true})
-    check(#f.requests==2 and f.requests[2].action=='faster' and f.menu.open,'speed changes remain in the menu and held keys do not repeat')
-    local mouse=fixture();mouse.menu:toggle();mouse.frame({});mouse.frame({x=450,y=28+100+4*39+10,click=true})
-    check(#mouse.requests==1 and mouse.requests[1].action=='cycleVehicle' and mouse.menu.open,'vehicle model right half cycles without closing')
-    mouse.frame({x=450,y=28+100+4*39+10,click=true})
-    check(#mouse.requests==1,'holding mouse button cannot flood spawn/selection requests')
-    mouse.frame({});mouse.frame({back=true});check(not mouse.menu.open and mouse.unlocks==1,'Backspace closes and releases input')
+case('native menu keyboard edges dispatch actions after restoring input',function()
+    local f=fixture();f.menu:toggle();f.tick({accept=true});check(#f.requests==0,'Enter held before opening cannot activate a feature')
+    f.tick({});f.tick({accept=true})
+    check(#f.requests==1 and f.requests[1].action=='toggle' and not f.requests[1].menuOpen and f.requests[1].unlocked,'noclip activation follows menu cleanup')
+    f.menu:toggle();f.tick();f.tick({down=true});f.tick();f.tick({down=true});f.tick();f.tick({right=true});f.tick({right=true})
+    check(#f.requests==2 and f.requests[2].action=='faster' and f.menu.open,'speed adjustment stays open and held arrows do not repeat')
+    f.tick();f.tick({back=true});check(not f.menu.open and f.unlocks==2,'Backspace closes without leaking either input lock')
+    local rows=f.menu:rows();check(rows[8].value:find('0 spawned',1,true) and rows[12].value=='F2 / Backspace','spawn count and close shortcut stay visible')
 end)
-case('menu errors restore input and messages remain read-only notifications',function()
-    local f=fixture();f.menu:toggle();f.failDraw=true;f.frame()
-    check(not f.menu.open and f.unlocks==1,'drawing exception restores controls immediately')
-    local partial=fixture();partial.failLock=true;partial.menu:toggle();partial.frame()
-    check(not partial.menu.open and partial.unlocks==1,'partial input lock failure also rolls back')
-    local toast=fixture();toast.menu:notice('Vehicle spawn failed: test');toast.frame()
-    check(toast.draws>0 and toast.locks==0 and #toast.requests==0,'closed-menu error notification draws without touching player input')
-    local rows=toast.menu:rows()
-    check(rows[8].value:find('0 spawned',1,true) and not rows[8].value:find('/',1,true) and rows[12].value=='F2 / Backspace','menu has no spawn-cap denominator and advertises F2')
-    check(rows[6].label=='Vehicle boost' and rows[6].value:find('OFF',1,true),'menu exposes vehicle boost and its off state')
-    check(rows[1].value=='ON' and rows[2].value=='AUTO GUARD' and rows[3].value:find('6 m/s',1,true),'menu displays current flight, landing protection and selected speed')
+case('native text failure and partial input capture never leave controls blocked',function()
+    local f=fixture();f.menu:toggle();f.failPresent=true;f.tick()
+    check(not f.menu.open and f.locks==0,'failed HUD submission never locks movement or look')
+    local partial=fixture();partial.failLock=true;partial.menu:toggle();partial.tick()
+    check(not partial.menu.open and partial.unlocks==1,'partial lock failure rolls back its captured state')
+    local toast=fixture();toast.menu:notice('Selected vehicle: Estate');check(not toast.menu:hasWork(),'a notice alone does not wake the asynchronous scheduler')
+    toast.tick();check(toast.presents==1 and toast.duration==2.5 and toast.locks==0,'an existing game-thread action can display car selection without locking input')
+    toast.tick();check(toast.presents==1,'an unchanged notification is not submitted repeatedly')
 end)
-case('native menu adapter uses named output parameters and balances input locks',function()
+case('native HUD queue uses flat reflected parameters and owns only its text entry',function()
     local oldAdapter,oldEngine=package.loaded.adapter,package.loaded.menu_engine
-    local oldName,oldEnum,oldFind,oldRegister=FName,EFindName,FindAllOf,RegisterCustomEvent
+    local oldName,oldEnum=FName,EFindName
     local pc={bShowMouseCursor=false,move=2,look=3,keys={}}
-    function pc:IsValid()return true end;function pc:GetAddress()return 1 end;function pc:GetFullName()return'PlayerController /World.PC'end
-    function pc:SetIgnoreMoveInput(ignore)self.move=self.move+(ignore and 1 or -1)end
-    function pc:SetIgnoreLookInput(ignore)self.look=self.look+(ignore and 1 or -1)end
-    function pc:GetMousePosition(x,y)x.LocationX=123;y.LocationY=456;return true end
+    function pc:IsValid()return true end;function pc:GetAddress()return 1 end;function pc:GetFullName()return'LocalPC'end
+    function pc:SetIgnoreMoveInput(v)self.move=self.move+(v and 1 or -1)end
+    function pc:SetIgnoreLookInput(v)self.look=self.look+(v and 1 or -1)end
     function pc:IsInputKeyDown(key)return self.keys[key.KeyName:ToString()] or false end
+    function pc:GetViewportSize(x,y)x.SizeX=1280;y.SizeY=720 end
+    function pc:DeprojectScreenPositionToWorld(x,y,origin,direction)
+        assert(x==32 and y==40);origin.X=10;origin.Y=20;origin.Z=30;direction.X=1;direction.Y=0;direction.Z=0;return true
+    end
+    local hud={PlayerOwner=pc,calls=0}
+    function hud:IsValid()return true end;function hud:GetAddress()return 2 end;function hud:GetFullName()return'LocalHUD'end
+    function pc:GetHUD()return hud end
+    function hud:AddDebugText(text,source,duration,offset,desired,color,skip,absolute,attached,font,scale,shadow)
+        assert(source==self and duration==.5 and offset.X==1010 and offset.Y==20 and desired.Z==30)
+        assert(color.R==225 and color.A==255 and skip==false and absolute==true and attached==false and font==nil and scale==1 and shadow==true)
+        self.calls=self.calls+1;self.text=text
+    end
+    function hud:RemoveDebugText(source,leaveDuration)assert(source==self and leaveDuration==false);self.removed=true end
     package.loaded.adapter={log=function()end};package.loaded.menu_engine=nil
     FName=function(n)return{ToString=function()return n end}end;EFindName={FNAME_Find=0}
     local ok,err=pcall(function()
-        local engine=require('menu_engine');local state=engine.capture({pc=pc,pcId='1:PlayerController /World.PC'})
-        engine.lock(state);check(pc.move==3 and pc.look==4 and pc.bShowMouseCursor and package.loaded.adapter.menuOpen,'menu adds exactly one move/look input lock')
-        pc.keys.LeftMouseButton=true;local input=engine.input({pc=pc})
-        check(input.x==123 and input.y==456 and input.click,'mouse positions use UE4SS LocationX/LocationY output tables')
-        engine.unlock(state);check(pc.move==2 and pc.look==3 and not pc.bShowMouseCursor and not package.loaded.adapter.menuOpen,'closing preserves preexisting game input lock counts and original cursor')
-        engine.unlock(state);check(pc.move==2 and pc.look==3,'repeated cleanup does not subtract another input lock')
-        pc.move=0;pc.look=0
-        function pc:IsMoveInputIgnored()return self.move>0 end
-        function pc:IsLookInputIgnored()return self.look>0 end
-        local pawn={};function pawn:IsValid()return true end;function pawn:GetAddress()return 2 end;function pawn:GetFullName()return'Pawn'end
-        package.loaded.adapter.playerContext=function()return {controller=pc,pawn=pawn}end
-        package.loaded.adapter.gameplay=function()return {IsGamePaused=function()return false end}end
-        local hud={PlayerOwner=pc,Canvas={SizeX=1280,SizeY=720,IsValid=function()return true end}}
-        function hud:IsValid()return true end
-        function hud:GetClass()return {GetFullName=function()return'BlueprintGeneratedClass /Game/UI/ALS_HUD.ALS_HUD_C'end}end
-        FindAllOf=function(kind)assert(kind=='HUD');return {hud}end
-        local registered={}
-        RegisterCustomEvent=function(name,callback)registered[#registered+1]=name end
-        engine.register(function()end);local ctx=engine.context();engine.context()
-        check(#registered==2 and registered[1]=='ReceiveDrawHUD' and registered[2]=='ExecuteUbergraph_ALS_HUD','loaded HUD fast-call fallback registers only once per class')
-        local actual,width,height=engine.hud({get=function()return hud end},ctx)
-        check(actual==hud and width==1280 and height==720,'drawing requires the local owner and an active HUD canvas')
-        hud.Canvas=nil;check(engine.hud({get=function()return hud end},ctx)==nil,'non-render HUD graph calls without a canvas do not draw or lock controls')
-
+        local e=require('menu_engine');local saved={pc=pc,pcId='1:LocalPC'}
+        e.present(saved,'Menu',.5);check(hud.calls==1 and hud.text=='Menu','native queue accepts a screen-positioned menu without Canvas/ReceiveDrawHUD')
+        local state=e.capture(saved);e.lock(state)
+        check(pc.move==3 and pc.look==4 and not pc.bShowMouseCursor and package.loaded.adapter.menuOpen,'keyboard UI adds one move/look lock and leaves cursor ownership alone')
+        pc.keys.Enter=true;check(e.input(saved).accept,'keyboard polling still works with movement ignored')
+        e.unlock(state);e.unlock(state)
+        check(pc.move==2 and pc.look==3 and not package.loaded.adapter.menuOpen,'cleanup preserves preexisting lock counts and is repeatable')
+        e.clear(saved);check(hud.removed,'only the HUD-keyed trainer text is removed')
+        hud.PlayerOwner=nil;check(not pcall(e.present,saved,'Other player',.5),'foreign/unowned HUDs cannot receive the menu')
     end)
-    package.loaded.adapter,package.loaded.menu_engine=oldAdapter,oldEngine;FName,EFindName,FindAllOf,RegisterCustomEvent=oldName,oldEnum,oldFind,oldRegister
+    package.loaded.adapter,package.loaded.menu_engine=oldAdapter,oldEngine;FName,EFindName=oldName,oldEnum
     if not ok then error(err)end
 end)
 end

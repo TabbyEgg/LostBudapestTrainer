@@ -80,7 +80,7 @@ local function fixture()
         a.Mesh.RelativeScale3D={X=scale.X,Y=scale.Y,Z=scale.Z}
         function a.Mesh:GetOwner()return a end
         a.components={a.Mesh}
-        function a:GetComponentsByClass(class)assert(class==f.meshClass);return self.components end
+        function a:GetComponentsByClass(class)assert(class==f.meshClass);if f.failDoors then error("door metadata unavailable")end;return self.components end
         if f.doors then
             local door=object('StaticMeshComponent /World.NewCar.DoorLeft')
             door.visible=true;door.hidden=false;door.bVisible=true;door.bHiddenInGame=false;door.collision=1;door.writes=0
@@ -225,6 +225,14 @@ case('converted models hide only the extra door components and keep them hidden 
         actor.alive=false
         Profile.maintainDoors()
         check(not Profile.steeringTarget(actor) and not Profile.hasWork(),'destroyed converted cars are pruned and stop the maintenance pump')
+    end)
+end)
+case('cosmetic door API failure does not discard a validated selected car',function()
+    runFixture(function(f)
+        f.failDoors=true
+        local profile=Profile.new(f.sourceClass,f.playerClass);local actor=f.spawn(profile)
+        check(actor.alive and actor.Mesh.SkeletalMesh==f.selectedBody and profile.doorWarning,'valid selected body survives unavailable cosmetic door metadata')
+        check(f.defaultsRestored(),'cosmetic failure still restores every temporary template edit')
     end)
 end)
 case('partial template changes and failed construction always restore the native setup',function()

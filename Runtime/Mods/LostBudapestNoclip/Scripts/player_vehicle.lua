@@ -117,7 +117,8 @@ end
 function Profile:apply()
     for _,change in ipairs(self.changes)do
         change.touched=true
-        change.object[change.key]=change.value
+        local ok,err=pcall(function()change.object[change.key]=change.value end)
+        if not ok then error('Selected vehicle template field '..change.key..': '..tostring(err),0)end
     end
 end
 function Profile:restore()
@@ -229,7 +230,10 @@ function Profile:validate(actor)
     local oldCount=mesh:GetNumMaterials()
     assert(oldCount>=0 and oldCount<=32,'Unsupported spawned material count')
     for i=0,math.max(oldCount,self.materialCount)-1 do mesh:SetMaterial(i,self.materials[i])end
-    self:hideExtraDoors(actor)
+    -- Door visibility is cosmetic. A missing door component API must not
+    -- discard an otherwise valid native vehicle with a matched physics rig.
+    local doorOk,doorError=pcall(self.hideExtraDoors,self,actor)
+    if not doorOk then self.doorWarning=tostring(doorError)end
     for key,record in pairs(convertedCars)do if not valid(record.actor) then convertedCars[key]=nil end end
     convertedCars[actor:GetAddress()]={actor=actor,name=objectName(actor),movement=movement,movementName=objectName(movement),meshName=objectName(mesh),bodyName=objectName(mesh.SkeletalMesh)}
 end

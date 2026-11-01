@@ -1,4 +1,4 @@
-# Lost Budapest Trainer 0.4.2
+# Lost Budapest Trainer 0.4.3
 
 [**Download the latest ZIP from Releases**](https://github.com/TabbyEgg/LostBudapestTrainer/releases/latest)
 
@@ -39,20 +39,16 @@ To temporarily disable the trainer, set `LostBudapestNoclip : 0` in that file.
 
 ## Menu
 
-Press **F2** in a loaded game to open or close the trainer menu. Click a row,
-or use **Up/Down** to select, **Left/Right** for speed/model, **Enter** to activate,
-and **Backspace** to close. Speed and model selection stay open; spawning, entry,
-repair and noclip actions close the menu before restoring gameplay controls and
-executing. Flight, god mode/landing protection, speed and driving status are live.
-Recent trainer messages, including spawn errors, appear on the HUD.
+Press **F2** in a loaded level to open or close the keyboard menu.
+Use **Up/Down** to select, **Left/Right** to adjust a speed or model, **Enter**
+to activate and **Backspace** to close. The selected row starts with `>`.
+The menu displays all trainer features and their live values as text over the
+game. It does not use mouse clicks.
 
-The menu uses the game's Blueprint HUD canvas, including a fallback for compiled
-HUD event graphs. It never replaces your HUD or changes game assets. If the HUD
-is unavailable it closes automatically and leaves hotkeys active.
-
-F2 opens/closes the menu even with an older Insert configuration. The log records
-both the menu request and its first successful HUD draw.
-Repeated key-down callbacks are ignored until you release the key.
+F2 works with older Insert configurations too. Speed/model selection and toggles
+stay open. Spawning, entry, repair and noclip close the menu and release its
+movement/look locks before executing. Recent action messages also appear briefly
+on screen, so **F3** car selection is visible without opening the menu.
 
 ### Vehicle boost
 
@@ -94,7 +90,9 @@ van 1 and van 2. Models must already be loaded in the current level.
 Only already-loaded blueprints are used. **There is no trainer spawn cap**; old
 `MaxVehicles` settings are ignored. The menu shows the live spawned count.
 Spawning many vehicles still consumes game memory and physics resources. A spawn only counts after its actual position
-is checked. Blocked placements try other positions ahead; all blocked attempts
+is checked. Blocked placements try up to 40 positions around you, out to 20 metres. The
+engine checks each destination and may adjust it to fit, rather than sweeping a
+path through curbs or parked cars. All rejected attempts
 remove the failed car rather than leaving it near the player. Spawn in a clear
 area. Failed spawns report the model and reason in the menu message and log.
 
@@ -119,8 +117,9 @@ exit a spawned car. Turn noclip off before entry.
 A model must have a loaded animated body, matching wheel count, valid wheel
 bones and finite positive mesh scale. Authored scale is applied before vehicle
 physics is created; zero or mirrored scale is refused. An incompatible rig, or one replaced during game
-construction, cancels the spawn with a log message. The trainer never silently
-substitutes the AI driving setup when player setup is selected.
+construction, cancels the spawn with a log message. A cosmetic door-hiding failure does not reject an otherwise valid matched
+vehicle; it is reported separately. The trainer never silently substitutes the
+AI driving setup when player setup is selected.
 
 Set `PlayerVehicleSetup = false` in `config.lua` to restore legacy traffic
 spawning. Legacy traffic driving uses W/S, A/D and Space with an attached camera;
