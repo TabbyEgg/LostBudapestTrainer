@@ -56,31 +56,45 @@ case('trainer driving validates entry, rolls back failure and restores on exit',
     a.repairTarget=function()return nil end
     check(not v:repair(),'repair never touches an unowned distant vehicle')
 end)
-case('steering correction applies to converted player cars through the native input setter',function()
+case('queued converted-car maintenance avoids global hooks and scopes keyboard steering',function()
     local oldAdapter,oldEngine,oldProfile=package.loaded.adapter,package.loaded.vehicle_engine,package.loaded.player_vehicle
+    local oldName,oldEnum=FName,EFindName
     local config=require('config');local oldSetting=config.InvertVehicleSteering
     local converted={IsValid=function()return true end,GetAddress=function()return 12 end,GetFullName=function()return 'ConvertedCar'end}
     local other={IsValid=function()return true end,GetAddress=function()return 13 end,GetFullName=function()return 'OtherCar'end}
-    local owner=converted;local pawn=converted
-    local component={IsValid=function()return true end,GetOwner=function()return owner end}
-    local amount={value=1,get=function(self)return self.value end,set=function(self,v)self.value=v end}
-    package.loaded.adapter={log=function()end,playerContext=function()return {pawn=pawn}end}
-    package.loaded.player_vehicle={steeringTarget=function(actor)return actor==converted end}
+    local movement={steer=0,writes=0,IsValid=function()return true end,GetAddress=function()return 14 end,GetFullName=function()return 'Movement'end}
+    function movement:SetSteeringInput(value)self.steer=value;self.writes=self.writes+1 end
+    local input,active,paused,ctxReads,doorTicks={},false,false,0,0
+    local pc={bShowMouseCursor=false,IsMoveInputIgnored=function()return false end,IsLookInputIgnored=function()return false end}
+    function pc:IsInputKeyDown(key)return input[key.KeyName:ToString()] or false end
+    local ctx={pawn=converted,controller=pc}
+    local api={log=function()end,playerContext=function()ctxReads=ctxReads+1;return ctx end,gameplay=function()return{IsGamePaused=function()return paused end}end}
+    package.loaded.adapter=api
+    package.loaded.player_vehicle={hasWork=function()return active end,maintainDoors=function()doorTicks=doorTicks+1 end,convertedMovement=function(pawn)if pawn==converted then return movement end end}
     package.loaded.vehicle_engine=nil;config.InvertVehicleSteering=nil
+    FName=function(name)return{ToString=function()return name end}end;EFindName={FNAME_Find=0}
     local ok,err=pcall(function()
         local e=require('vehicle_engine')
-        check(e.correctSteering({get=function()return component end},amount) and amount.value==-1,'normal game F-entry steering is corrected without a trainer driver state')
-        amount.value=-.5;e.correctSteering({get=function()return component end},amount)
-        check(amount.value==.5,'both directions and analog values retain magnitude')
-        owner=other;amount.value=.4
-        check(not e.correctSteering({get=function()return component end},amount) and amount.value==.4,'NPC movement inputs remain untouched')
-        pawn=other
-        check(not e.correctSteering({get=function()return component end},amount) and amount.value==.4,'the original native car and unconverted vehicles keep their original steering')
-        pawn=converted;owner=converted;e.toggleSteering();amount.value=1
-        check(not e.correctSteering({get=function()return component end},amount) and amount.value==1,'menu toggle restores original steering immediately')
+        e.tickConverted()
+        check(not e.hasConvertedWork() and ctxReads==0 and doorTicks==0,'no Unreal access or background maintenance before a converted car exists')
+        active=true;input.D=true;e.tickConverted()
+        check(movement.steer==-1 and doorTicks==1,'D is corrected inside queued work and doors are maintained without a native hook')
+        input.D=false;input.A=true;e.tickConverted()
+        check(movement.steer==1,'A uses the opposite corrected direction')
+        input.A=false;e.tickConverted();local writes=movement.writes;movement.steer=.4;e.tickConverted()
+        check(movement.writes==writes and movement.steer==.4,'keyboard release clears its correction once and leaves later analog inputs alone')
+        input.D=true;ctx.pawn=other;e.tickConverted()
+        check(movement.writes==writes,'original cars, NPCs and unconverted pawns receive no steering writes')
+        ctx.pawn=converted;api.menuOpen=true;e.tickConverted();api.menuOpen=false;paused=true;e.tickConverted();paused=false
+        check(movement.writes==writes,'pause and trainer menu suppress keyboard steering')
+        e.toggleSteering();e.tickConverted()
+        check(movement.writes==writes and not e.invertSteering,'menu toggle disables correction without registering or removing hooks')
+        e.toggleSteering();movement.SetSteeringInput=function()error('component changed')end;e.tickConverted()
+        check(e.maintenanceFailed and not e.hasConvertedWork(),'changed component stops only converted-car maintenance instead of breaking the core scheduler')
     end)
     config.InvertVehicleSteering=oldSetting
     package.loaded.adapter,package.loaded.vehicle_engine,package.loaded.player_vehicle=oldAdapter,oldEngine,oldProfile
+    FName,EFindName=oldName,oldEnum
     if not ok then error(err)end
 end)
 case('native vehicle adapter uses native spawn helper, health guard and reversible possession',function()

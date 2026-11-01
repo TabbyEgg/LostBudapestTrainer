@@ -83,11 +83,12 @@ local function fixture()
         function a:GetComponentsByClass(class)assert(class==f.meshClass);return self.components end
         if f.doors then
             local door=object('StaticMeshComponent /World.NewCar.DoorLeft')
-            door.visible=true;door.hidden=false;door.collision=1
+            door.visible=true;door.hidden=false;door.bVisible=true;door.bHiddenInGame=false;door.collision=1;door.writes=0
             function door:GetOwner()return a end
-            function door:SetVisibility(v,propagate)assert(propagate);self.visible=v end
-            function door:SetHiddenInGame(v,propagate)assert(propagate);self.hidden=v end
-            function door:SetCollisionEnabled(v)self.collision=v end
+            function door:SetVisibility(v,propagate)assert(propagate);self.visible=v;self.bVisible=v;self.writes=self.writes+1 end
+            function door:SetHiddenInGame(v,propagate)assert(propagate);self.hidden=v;self.bHiddenInGame=v;self.writes=self.writes+1 end
+            function door:SetCollisionEnabled(v)self.collision=v;self.writes=self.writes+1 end
+            function door:GetCollisionEnabled()return self.collision end
             local driver=object('SkeletalMeshComponent /World.NewCar.Driver')
             function driver:GetOwner()return a end
             function driver:SetVisibility()error('driver must stay visible')end
@@ -133,7 +134,11 @@ local function fixture()
         return require('native_spawn').actor({controller=f.pc,pawn=f.pawn},f.playerClass,
             {Translation={X=700,Y=0,Z=100},Rotation={Z=0,W=1}},'WheeledVehicle',profile)
     end
-    function f.finish()FindAllOf,StaticFindObject,StaticConstructObject=f.oldFind,f.oldStatic,f.oldConstruct end
+    function f.finish()
+        for _,actor in ipairs(f.actors)do actor.alive=false end
+        Profile.maintainDoors()
+        FindAllOf,StaticFindObject,StaticConstructObject=f.oldFind,f.oldStatic,f.oldConstruct
+    end
     function f.defaultsRestored()
         return f.player.Mesh.SkeletalMesh==f.nativeBody and f.player.Mesh.AnimClass==f.nativeAnimation and f.player.Mesh.PhysicsAssetOverride==f.nativePhysics
             and f.playerWheels[1].BoneName:ToString()=='AbelWheel1' and f.playerWheels[1].WheelClass==f.nativeWheel and f.playerWheels[1].AdditionalOffset.X==1 and f.playerWheels[3].bDisableSteering==false
@@ -203,17 +208,23 @@ case('converted models hide only the extra door components and keep them hidden 
         local actor=f.spawn(Profile.new(f.sourceClass,f.playerClass))
         check(not actor.door.visible and actor.door.hidden and actor.door.collision==0,'separate original door panel and its collision are disabled')
         check(actor.Mesh.SkeletalMesh==f.selectedBody and actor.driver.alive,'selected body and driver are retained')
-        local amount={value=true,get=function(self)return self.value end,set=function(self,v)self.value=v end}
-        check(Profile.guardDoor({get=function()return actor.door end},amount,'visible') and amount.value==false,'opening and exit animation cannot make the original panel visible')
-        amount.value=false;Profile.guardDoor({get=function()return actor.door end},amount,'hidden')
-        check(amount.value==true,'hidden-in-game calls cannot reveal the extra panel')
-        amount.value=3;Profile.guardDoor({get=function()return actor.door end},amount,'collision')
-        check(amount.value==0,'door collision cannot be reenabled by exit logic')
-        amount.value=true
-        check(not Profile.guardDoor({get=function()return actor.driver end},amount,'visible') and amount.value==true,'untracked components and scene doors stay untouched')
+        actor.door.bVisible=true;actor.door.bHiddenInGame=false;actor.door.collision=3
+        Profile.maintainDoors()
+        check(not actor.door.bVisible and actor.door.bHiddenInGame and actor.door.collision==0,'queued maintenance re-hides a panel revealed by original door animation')
+        local writes=actor.door.writes;Profile.maintainDoors()
+        check(actor.door.writes==writes,'already hidden doors are not rewritten every update')
+        check(Profile.convertedMovement(actor)==actor.VehicleMovement and Profile.convertedMovement(f.pawn)==nil,'steering resolves only the saved movement of the converted car')
+        local movement=actor.VehicleMovement;actor.VehicleMovement=f.player.VehicleMovement
+        check(Profile.convertedMovement(actor)==nil,'a changed movement component cannot receive steering writes')
+        actor.VehicleMovement=movement
+        actor.door.GetOwner=function()return f.pawn end
+        actor.door.bVisible=true;actor.door.bHiddenInGame=false;actor.door.collision=1
+        Profile.maintainDoors()
+        check(actor.door.bVisible and not actor.door.bHiddenInGame and actor.door.collision==1,'reparented components are forgotten rather than changing another actor')
         check(Profile.steeringTarget(actor) and not Profile.steeringTarget(f.pawn),'only converted spawned cars qualify for the steering correction')
         actor.alive=false
-        check(not Profile.steeringTarget(actor),'destroyed converted cars are not valid correction targets')
+        Profile.maintainDoors()
+        check(not Profile.steeringTarget(actor) and not Profile.hasWork(),'destroyed converted cars are pruned and stop the maintenance pump')
     end)
 end)
 case('partial template changes and failed construction always restore the native setup',function()

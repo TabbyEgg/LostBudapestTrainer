@@ -213,7 +213,13 @@ try {
             throw "A different loader/shared file already exists: $relative. No files were changed; keep your existing loader installation separate."
         }
         if ($priorFiles.ContainsKey($relative) -and $exists -and $oldHash -ne $priorFiles[$relative].installedSha256) {
-            throw "An installed file was edited: $relative. Update stopped without overwriting it."
+            # Recover a trainer-disabled mod entry only when merging it back on
+            # reproduces the exact bytes previously owned by this installation.
+            # Other mod-list edits still stop the update and remain untouched.
+            $restoresOwnedModList = $relative -eq 'Mods/mods.txt' -and $newHash -eq $priorFiles[$relative].installedSha256
+            if (-not $restoresOwnedModList) {
+                throw "An installed file was edited: $relative. Update stopped without overwriting it."
+            }
         }
         $backup = if ($exists) { $backupRelative + '/' + $relative } else { $null }
         $plans.Add([pscustomobject]@{ path = $relative; beforeExisted = $exists; beforeSha256 = $oldHash; backupPath = $backup; installedSha256 = $newHash })

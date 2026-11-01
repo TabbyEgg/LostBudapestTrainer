@@ -1,5 +1,5 @@
 {
-  "version": "0.4.1",
+  "version": "0.4.2",
   "log_sha256": "cd98db0c89ba82dea5c3c812cf614c69c4e49af85e1f09066adc375e95275b94",
   "scope": "Only class identities are recorded; original user log and game EXE are not redistributed.",
   "player_car": "/Game/Autok/Abel_Car.Abel_Car_C",
@@ -59,5 +59,14 @@
     "Intercept native SetSteeringInput for converted cars controlled by the local player only; default correction on, menu/config toggle.",
     "Hide extra door-named mesh components or door-asset mesh components on converted cars; guard visibility/hidden/collision setters against reappearance."
   ],
-  "converted_estate_native_hud_user_observed": true
+  "converted_estate_native_hud_user_observed": true,
+  "loading_crash_enabled_log_sha256": "55e847bcc227db62cc1f251accc36b195b317d40c7dee19ca6e7b86d67dd169a",
+  "loading_ok_disabled_log_sha256": "6c9328298ea2221704cc34b7468a7680276ee26732c3f5dd04d54d48e46b76d8",
+  "level_loading_regression": {
+    "user_report": "v0.4.1 fatal error while loading into level; trainer disabled loads successfully.",
+    "enabled_log": "Four new global setter hooks plus original damage/restart hooks register; Ready appears; log ends after two Noclip off messages; no crash stack, Lua error or completed vehicle spawn.",
+    "disabled_log": "Same loader completes initialization, records trainer disabled, and starts event loop; user confirms level runs fine.",
+    "root_cause_status": "Trainer regression isolated by user. Exact native failing call not established by supplied log.",
+    "recovery_change": "Remove all four new engine-wide setter hooks; replace with game-thread maintenance after successful converted trainer spawn, with no startup world access."
+  }
 }

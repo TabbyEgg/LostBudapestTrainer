@@ -51,7 +51,7 @@ function Menu:rows()
         {label='Return to flight start',value='F10',action='return'},
         {label='Vehicle model',value='<  '..s.model..'  >',action='cycleVehicle',left='previousVehicle',right='cycleVehicle',stay=true},
         {label='Vehicle boost',value=(s.boost or 0)>0 and ('<  '..s.boost..' km/h  >') or '<  OFF  >',action='boostFaster',left='boostSlower',right='boostFaster',stay=true},
-        {label='Steering correction',value=s.steeringReady==false and 'UNAVAILABLE' or (s.steering and 'ON' or 'OFF'),action='steering',stay=true},
+        {label='Keyboard steering fix',value=s.steering and 'ON' or 'OFF',action='steering',stay=true},
         {label='Spawn selected vehicle',value=string.format('%d spawned   F9',s.spawned or 0),action='spawnVehicle'},
         {label=s.driving and 'Exit trainer driving' or 'Enter nearby vehicle',value='F5',action='drive'},
         {label='Recover / repair vehicle',value='F1',action='repair'},
@@ -128,7 +128,7 @@ function Menu:frame(raw)
         rect(colors.panel,x,y,w,(608+extra)*scale)
         rect(colors.accent,x,y,4*scale,(608+extra)*scale)
         text('LOST BUDAPEST',colors.accent,x+20*scale,y+17*scale,1.15)
-        text('TRAINER  /  0.4.1',colors.text,x+20*scale,y+48*scale,.85)
+        text('TRAINER  /  0.4.2',colors.text,x+20*scale,y+48*scale,.85)
         text('F3: next car  |  F9: spawn  |  arrows + Enter',colors.muted,x+20*scale,y+75*scale,.72)
         for i,row in ipairs(rows) do
             local yy=y+top+(i-1)*rh

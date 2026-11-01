@@ -301,18 +301,16 @@ local function engine()
         end
         LoopAsync=function(delay,callback)assert(delay>0 and delay<=100);f.loop=callback end
         RegisterLoadMapPreHook=function()f.forbiddenMapCalls=(f.forbiddenMapCalls or 0)+1;error('Do not register the upstream-broken LoadMapPre callback')end
+        f.hookRequests={}
         RegisterHook=function(path,callback)
+            f.hookRequests[#f.hookRequests+1]=path
             if path=='/Script/Engine.PlayerController:ClientRestart' then f.restart=callback
             else
                 local allowed={
                     ['/Script/Engine.GameplayStatics:ApplyDamage']=true,
                     ['/Script/Engine.GameplayStatics:ApplyPointDamage']=true,
-                    ['/Script/PhysXVehicles.WheeledVehicleMovementComponent:SetSteeringInput']=true,
-                    ['/Script/Engine.SceneComponent:SetVisibility']=true,
-                    ['/Script/Engine.SceneComponent:SetHiddenInGame']=true,
-                    ['/Script/Engine.PrimitiveComponent:SetCollisionEnabled']=true,
                 }
-                assert(allowed[path],'only documented native input/visibility/damage setters are hooked')
+                assert(allowed[path],'only original native damage guards are registered')
                 f.damageHooks=f.damageHooks or {};f.damageHooks[path]=callback
             end
             return 1,2
@@ -342,6 +340,18 @@ case('new vehicle keys are queued and failed diagnostics cannot drop active flig
     f.press('F3');f.step(0.01);check(not f.pawn.collision,'vehicle selection does not mutate player physics')
     f.pawn.bCanBeDamaged=true;f.press('F4');f.step(0.01);check(f.pawn.bCanBeDamaged==false,'god mode key disables the actual player damage property')
     f.inGame=true;f.restart();f.inGame=false;f.step(0.01);check(f.pawn.bCanBeDamaged==false,'manual god mode remains requested across player restarts and vehicle possession')
+    f.finish()
+end)
+
+case('cold startup never registers engine-wide component or steering hooks',function()
+    local f=engine();f.load()
+    local exact=#f.hookRequests==3
+    for _,path in ipairs(f.hookRequests)do
+        if path~='/Script/Engine.GameplayStatics:ApplyDamage' and path~='/Script/Engine.GameplayStatics:ApplyPointDamage' and path~='/Script/Engine.PlayerController:ClientRestart' then exact=false end
+    end
+    check(exact,'startup registers only the original damage and restart hooks, with no component/steering setter attempts')
+    f.loop()
+    check(#f.queue==0 and #f.events==0,'cold async loop has no converted cars and never reads or schedules work against a loading level')
     f.finish()
 end)
 

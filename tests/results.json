@@ -1,27 +1,27 @@
 {
-  "assertions": 306,
+  "assertions": 312,
   "failures": 0,
   "lua_implementation": "Lua 5.4",
   "production_source_sha256": {
-    "Runtime/Mods/LostBudapestNoclip/Scripts/adapter.lua": "b6757f26aa15ed77321b5781cb4d810f26732f95b8ccad05d5e1faa733f3fd77",
+    "Runtime/Mods/LostBudapestNoclip/Scripts/adapter.lua": "9d8c44550f9097b4266f8bf1c58b0450a4101ddfc248826be2a066df79ed1c8a",
     "Runtime/Mods/LostBudapestNoclip/Scripts/config.lua": "fd85cc59a21a3d411397838d7a05fae03dc8dbe1d623bffd0a5982bc45007ac9",
     "Runtime/Mods/LostBudapestNoclip/Scripts/controller.lua": "15f19f82eedae42916a788c541e0e6e5d50cf31fed403e8622a03d8333314871",
-    "Runtime/Mods/LostBudapestNoclip/Scripts/main.lua": "667b2d53267565674f999102904baee50b20750ca184cbdddb21ccd6dfcfb006",
-    "Runtime/Mods/LostBudapestNoclip/Scripts/menu.lua": "c2357025dbe788c4a44f7403b00ab81bb7343575fc0c6959c7c2c2d66c903b6f",
+    "Runtime/Mods/LostBudapestNoclip/Scripts/main.lua": "5bb37297149c0ffacb927f7ab400931bc630623f6a412ba7ceab6dde7739c7eb",
+    "Runtime/Mods/LostBudapestNoclip/Scripts/menu.lua": "bf3885572b8424ec41e8dede28adb90b80d3549d11bd64de00a5bb81e3ea1086",
     "Runtime/Mods/LostBudapestNoclip/Scripts/menu_engine.lua": "c7ecde8050e6a63220568605c6b60800204d65916eb48bb1fc6bfcd8a0bd230e",
     "Runtime/Mods/LostBudapestNoclip/Scripts/native_spawn.lua": "3231a6870e89d2f71eb7fb7c2c0cdcdd276c1f9ebb0189902a45083708c668aa",
-    "Runtime/Mods/LostBudapestNoclip/Scripts/player_vehicle.lua": "697db35dd02b5fd9d12d22f42bda9e51f06805a1303a71c7dcdeba2c7baf5ade",
+    "Runtime/Mods/LostBudapestNoclip/Scripts/player_vehicle.lua": "c416c4177bcc8da834d5885fe58bca5dd3f003f30746130db980871b7078f80a",
     "Runtime/Mods/LostBudapestNoclip/Scripts/protection.lua": "33a9dd48b59ff28606b5fb416bf89da78b7bd86c2070c095309d23f8ef44621c",
-    "Runtime/Mods/LostBudapestNoclip/Scripts/vehicle_engine.lua": "2b9f20a02e500716010ee2bbea194219a63b9df83ba970ed70426e0f844b5b07",
+    "Runtime/Mods/LostBudapestNoclip/Scripts/vehicle_engine.lua": "f132dc00277aa7936fbcd553ab078f172e434b16f1302dca8b7d6a8b3a4debc6",
     "Runtime/Mods/LostBudapestNoclip/Scripts/vehicles.lua": "83cef3d962a9e017665180dd39678ed3a1b8d46503eb7e1de7a294d5d552f7fe"
   },
   "harness_sha256": {
     "run.py": "49d4775de07242675295d374d9a08e048c3093573b696c0def8cd87f2fc2cd85",
     "menu_regressions.lua": "8617518a52de27aff01236e701cb483b98649d95497566ed30bb57165f590598",
-    "player_vehicle_regressions.lua": "e9c483f53598fe0c61e7834b356e85c718c0ae9f415201fb5335ef34fa77b197",
-    "regressions.lua": "38dcb253f074e18606552a8ebc3497321068af2c087860ce1f1fc26c86d698dc",
+    "player_vehicle_regressions.lua": "be0fb970ea16892478332c3c408bf3c3e1deeb3bddc4b0d602cba444e70083ee",
+    "regressions.lua": "db3a5f8ab11149d8a0e3c79fdf3eaeab47670e7ab1373dec65af786d3a3cf301",
     "spawn_regressions.lua": "39c180dd2e6f719984174a26556502e0b8bd944fd0f4c2a10e70fc598d83254b",
-    "vehicle_regressions.lua": "cfaaeeedd0c01ba8115a2dfa9ba9cd8e320c55c83bf4d3589d8b88a1b8e1f2c4"
+    "vehicle_regressions.lua": "91b493a1f82013313e3090367a66509683cdc8686b06723bd0d15dcd7ac30746"
   },
   "game_runtime_tested": false,
   "ue4ss_native_loader_executed": false

@@ -1,7 +1,7 @@
 -- All calls are made by main.lua on the game thread. No guessed memory offsets.
 local adapter=require("adapter")
 local config=require("config")
-local Engine={log=adapter.log,invertSteering=config.InvertVehicleSteering~=false,steeringReady=false}
+local Engine={log=adapter.log,invertSteering=config.InvertVehicleSteering~=false}
 local function number(v)return type(v)=="number" and v==v and v~=math.huge and v~=-math.huge end
 local function vector(v)return v and number(v.X) and number(v.Y) and number(v.Z) end
 local function rotation(v)return v and number(v.Pitch) and number(v.Yaw) and number(v.Roll) end
@@ -20,22 +20,12 @@ function Engine.class(path)
 end
 function Engine.toggleSteering()
     Engine.invertSteering=not Engine.invertSteering
+    Engine.steeringHeld=nil
     Engine.log(Engine.invertSteering and "Steering correction on." or "Steering correction off; original game steering restored.")
 end
-function Engine.correctSteering(context,amount)
-    if not Engine.invertSteering then return false end
-    local component=context:get()
-    if not Engine.valid(component) then return false end
-    local owner=component:GetOwner()
-    local ctx=adapter.playerContext()
-    if not ctx or not Engine.valid(owner) or owner:GetAddress()~=ctx.pawn:GetAddress() or owner:GetFullName()~=ctx.pawn:GetFullName() then return false end
-    -- Only swapped traffic bodies need this correction. Leave the original
-    -- Abel car, other game vehicles and NPC steering untouched.
-    if not require("player_vehicle").steeringTarget(owner) then return false end
-    local value=amount:get()
-    if not number(value) then return false end
-    amount:set(-value)
-    return true
+function Engine.hasConvertedWork()
+    -- Pure Lua check: the asynchronous scheduler must not inspect Unreal objects.
+    return not Engine.maintenanceFailed and require("player_vehicle").hasWork()
 end
 function Engine.spawnTransform(ctx)
     local position=ctx.pawn:K2_GetActorLocation()
@@ -58,7 +48,9 @@ function Engine.begin(ctx,class,transform)
     if config.PlayerVehicleSetup~=false and class:GetFullName():find("/Game/Traffic_AI_System/Cars/",1,true) then
         local player=assert(Engine.class("/Game/Autok/Abel_Car.Abel_Car_C"),"Abel player vehicle must be loaded for this model")
         local profile=require("player_vehicle").new(class,player)
-        return require("native_spawn").actor(ctx,player,transform,"WheeledVehicle",profile)
+        local actor=require("native_spawn").actor(ctx,player,transform,"WheeledVehicle",profile)
+        Engine.maintenanceFailed=false
+        return actor
     end
     return require("native_spawn").actor(ctx,class,transform,"WheeledVehicle")
 end
@@ -148,6 +140,33 @@ function Engine.repair(actor)
     return "Vehicle recovered upright and motion stopped. This blueprint exposes no verified health repair; damage was not changed."
 end
 local function key(pc,name) return pc:IsInputKeyDown({KeyName=FName(name,EFindName.FNAME_Find)}) end
+function Engine.tickConverted()
+    if not Engine.hasConvertedWork() then return end
+    local ok,err=pcall(function()
+        local profiles=require("player_vehicle")
+        profiles.maintainDoors(Engine.log)
+        if not Engine.invertSteering or adapter.menuOpen then Engine.steeringHeld=nil;return end
+        local ctx=Engine.player()
+        if not ctx then Engine.steeringHeld=nil;return end
+        local movement=profiles.convertedMovement(ctx.pawn)
+        if not Engine.valid(movement) then Engine.steeringHeld=nil;return end
+        local left,right=key(ctx.controller,"A"),key(ctx.controller,"D")
+        local target=id(ctx.pawn)..":"..id(movement)
+        if left or right then
+            movement:SetSteeringInput((left and 1 or 0)-(right and 1 or 0))
+            Engine.steeringHeld=target
+        else
+            -- Release only a keyboard correction we applied to this same car.
+            -- With no A/D held, leave gamepad and other native inputs alone.
+            if Engine.steeringHeld==target then movement:SetSteeringInput(0)end
+            Engine.steeringHeld=nil
+        end
+    end)
+    if not ok then
+        Engine.maintenanceFailed=true;Engine.steeringHeld=nil
+        Engine.log("Converted car maintenance stopped: "..tostring(err))
+    end
+end
 function Engine.captureDriver(ctx,actor)
     assert(id(ctx.pawn)~=id(actor),"Already inside a vehicle; use its normal exit control")
     local movement=actor.VehicleMovement

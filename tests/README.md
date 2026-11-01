@@ -64,6 +64,18 @@ a modeled Unreal boundary; the fixture does not execute the Windows game.
 
 0.4.1 cases exercise reserved F2/F3/Home migration from preserved configs, the
 actual main-to-HUD adapter path and balanced menu locks, 100 spawns with a legacy
-limit of one, converted-car-only steering interception through native input,
+limit of one, converted-car-only keyboard steering in queued updates,
 positive source scale installed before construction without late resizing, and
-extra-door visibility/hidden/collision guards scoped to converted components.
+extra-door visibility/hidden/collision maintenance scoped to converted components.
+
+0.4.2 cold-start cases permit only the original two damage hooks and player
+restart hook, and reject attempts to add engine-wide component/steering setter
+hooks. Before a converted car exists the async scheduler does not touch Unreal
+or enqueue maintenance. Owned door maintenance avoids redundant writes and
+forgets reparented/destroyed components. Steering checks cover normal F entry,
+keyboard release without continued analog-input overrides, original/NPC vehicle
+exclusion, pause/menu gating and isolated component failures.
+
+Installer recovery cases verify that re-enabling a disabled trainer entry must
+restore the previously owned mod-list bytes exactly. They also verify the
+original backup chain and reject unrelated mod-list edits without writes.

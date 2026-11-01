@@ -171,17 +171,25 @@ function Profile:hideExtraDoors(actor)
         end
     end
 end
-function Profile.guardDoor(context,value,mode)
-    local part=context:get()
-    if not valid(part) then return false end
-    local key=part:GetAddress()
-    local record=hiddenDoors[key]
-    if not record then return false end
-    if not valid(record.actor) or objectName(part)~=record.name or objectName(part:GetOwner())~=record.owner then hiddenDoors[key]=nil;return false end
-    if mode=='hidden' then value:set(true)
-    elseif mode=='collision' then value:set(0)
-    else value:set(false)end
-    return true
+function Profile.hasWork()return next(convertedCars)~=nil or next(hiddenDoors)~=nil end
+function Profile.maintainDoors(log)
+    -- Called only from the queued game-thread update. Never intercept native
+    -- setters shared by the level loader, world props or other actors.
+    for key,record in pairs(hiddenDoors)do
+        local ok,err=pcall(function()
+            local part=record.part
+            if not valid(record.actor) or not valid(part) or objectName(record.actor)~=record.owner or objectName(part)~=record.name or objectName(part:GetOwner())~=record.owner then
+                hiddenDoors[key]=nil;return
+            end
+            if part.bVisible~=false then part:SetVisibility(false,true)end
+            if part.bHiddenInGame~=true then part:SetHiddenInGame(true,true)end
+            if part:GetCollisionEnabled()~=0 then part:SetCollisionEnabled(0)end
+        end)
+        if not ok then hiddenDoors[key]=nil;if log then log('Door maintenance stopped for a changed component: '..tostring(err))end end
+    end
+    for key,record in pairs(convertedCars)do
+        if not valid(record.actor) or objectName(record.actor)~=record.name then convertedCars[key]=nil end
+    end
 end
 function Profile.steeringTarget(actor)
     if not valid(actor) then return false end
@@ -190,6 +198,12 @@ function Profile.steeringTarget(actor)
     if not record then return false end
     if not valid(record.actor) or objectName(actor)~=record.name then convertedCars[key]=nil;return false end
     return true
+end
+function Profile.convertedMovement(actor)
+    if not Profile.steeringTarget(actor) then return nil end
+    local record=convertedCars[actor:GetAddress()]
+    if not valid(record.movement) or objectName(actor.VehicleMovement)~=record.movementName or objectName(actor.Mesh)~=record.meshName or objectName(actor.Mesh.SkeletalMesh)~=record.bodyName then return nil end
+    return record.movement
 end
 function Profile:validate(actor)
     assert(actor:GetClass():GetFullName()=='BlueprintGeneratedClass /Game/Autok/Abel_Car.Abel_Car_C','The spawned car is not the native player vehicle')
@@ -217,6 +231,6 @@ function Profile:validate(actor)
     for i=0,math.max(oldCount,self.materialCount)-1 do mesh:SetMaterial(i,self.materials[i])end
     self:hideExtraDoors(actor)
     for key,record in pairs(convertedCars)do if not valid(record.actor) then convertedCars[key]=nil end end
-    convertedCars[actor:GetAddress()]={actor=actor,name=objectName(actor)}
+    convertedCars[actor:GetAddress()]={actor=actor,name=objectName(actor),movement=movement,movementName=objectName(movement),meshName=objectName(mesh),bodyName=objectName(mesh.SkeletalMesh)}
 end
 return Profile

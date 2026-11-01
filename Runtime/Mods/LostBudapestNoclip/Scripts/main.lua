@@ -55,14 +55,14 @@ if type(extraCycle)=="string" and extraCycle:upper()~="F2" and extraCycle:upper(
 
 local menu=require("menu").new(require("menu_engine"),function()
     return {flying=controller:isEnabled(),god=protection.manual,protected=protection.landing or protection.flight,
-        speed=config.Speeds[controller.speedIndex],model=vehicles.catalog[vehicles.selected].name,driving=vehicles.driver~=nil,spawned=vehicles:count(),boost=vehicles.boostSpeeds[vehicles.boostIndex],steering=vehicleEngine.invertSteering,steeringReady=vehicleEngine.steeringReady}
+        speed=config.Speeds[controller.speedIndex],model=vehicles.catalog[vehicles.selected].name,driving=vehicles.driver~=nil,spawned=vehicles:count(),boost=vehicles.boostSpeeds[vehicles.boostIndex],steering=vehicleEngine.invertSteering}
 end,request)
 adapter.onLog=function(message)menu:notice(message)end
 local hookOk,hookError=pcall(require("menu_engine").register,function(hud)menu:frame(hud)end)
 if not hookOk then adapter.log("HUD menu callback unavailable; hotkeys remain active: "..tostring(hookError))end
 
 LoopAsync(16, function()
-    if not queued and (#actions > 0 or controller:hasWork() or protection:hasWork() or vehicles:hasWork() or menu:hasWork() or next(heldKeys)~=nil) then
+    if not queued and (#actions > 0 or controller:hasWork() or protection:hasWork() or vehicles:hasWork() or menu:hasWork() or vehicleEngine.hasConvertedWork() or next(heldKeys)~=nil) then
         queued = true
         local ok, err = pcall(ExecuteInGameThread, function()
             -- Drop the pending flag even if a callback fails. Only one queued
@@ -101,6 +101,7 @@ LoopAsync(16, function()
                 controller:tick()
                 protection:tick(controller:isEnabled())
                 vehicles:tick()
+                vehicleEngine.tickConverted()
             end)
             queued = false
             if not callbackOk then
@@ -118,18 +119,8 @@ LoopAsync(16, function()
 end)
 
 if type(RegisterHook) == "function" then
-    local steerOk,steerError=pcall(RegisterHook,"/Script/PhysXVehicles.WheeledVehicleMovementComponent:SetSteeringInput",function(context,amount)
-        local ok,err=pcall(vehicleEngine.correctSteering,context,amount)
-        if not ok and not vehicleEngine.steeringWarning then vehicleEngine.steeringWarning=true;adapter.log("Steering correction unavailable: "..tostring(err))end
-    end)
-    vehicleEngine.steeringReady=steerOk
-    if not steerOk then adapter.log("Steering hook unavailable: "..tostring(steerError))end
-    for _,hook in ipairs({{"/Script/Engine.SceneComponent:SetVisibility","visible"},{"/Script/Engine.SceneComponent:SetHiddenInGame","hidden"},{"/Script/Engine.PrimitiveComponent:SetCollisionEnabled","collision"}})do
-        local ok,err=pcall(RegisterHook,hook[1],function(context,value)
-            pcall(require("player_vehicle").guardDoor,context,value,hook[2])
-        end)
-        if not ok then adapter.log("Door display guard unavailable: "..tostring(err))end
-    end
+    -- Do not hook engine-wide visibility, collision or steering setters. Those
+    -- run during level loading and may execute beyond this mod's owned actors.
     for _,path in ipairs({"/Script/Engine.GameplayStatics:ApplyDamage","/Script/Engine.GameplayStatics:ApplyPointDamage"}) do
         local damageOk,damageError=pcall(RegisterHook,path,function(_,target,amount)
             if protection.manual or controller:isEnabled() or protection.landing then

@@ -1,11 +1,11 @@
 {
   "powershell_version": "7.6.9",
   "host": "Linux; Windows paths/folder picker/game runtime not executed",
-  "assertions": 34,
+  "assertions": 61,
   "failures": 0,
   "checks": [
     {
-      "name": "fresh installation completes: Lost Budapest Noclip installed. Start the game normally; F6 toggles noclip.\nReceipt and original-file backups are in: /workspace/lost-budapest-research/lbn-install-tests-bviy4csb/fresh/game/Eltunt_Budapest3/Binaries/Win64\n",
+      "name": "fresh installation completes: Lost Budapest Noclip installed/updated. Start the game normally; F6 toggles noclip.\nReceipt and original-file backups are in: /workspace/lost-budapest-research/lbn-install-tests-ewxypsm3/fresh/game/Eltunt_Budapest3/Binaries/Win64\n",
       "pass": true
     },
     {
@@ -21,7 +21,7 @@
       "pass": true
     },
     {
-      "name": "fresh receipt lists exactly seven payloads plus merged mod list",
+      "name": "fresh receipt lists all fourteen payloads plus merged mod list",
       "pass": true
     },
     {
@@ -37,7 +37,7 @@
       "pass": true
     },
     {
-      "name": "Win64 direct install with existing loader/config completes: Lost Budapest Noclip installed. Start the game normally; F6 toggles noclip.\nReceipt and original-file backups are in: /workspace/lost-budapest-research/lbn-install-tests-bviy4csb/existing/game/Eltunt_Budapest3/Binaries/Win64\n",
+      "name": "Win64 direct install with existing loader/config completes: Lost Budapest Noclip installed/updated. Start the game normally; F6 toggles noclip.\nReceipt and original-file backups are in: /workspace/lost-budapest-research/lbn-install-tests-ewxypsm3/existing/game/Eltunt_Budapest3/Binaries/Win64\n",
       "pass": true
     },
     {
@@ -139,12 +139,122 @@
     {
       "name": "uninstall recognizes already-restored original bytes and finishes safely",
       "pass": true
+    },
+    {
+      "name": "previous-version install creates a real legacy receipt",
+      "pass": true
+    },
+    {
+      "name": "Update upgrades legacy receipt directly without uninstall",
+      "pass": true
+    },
+    {
+      "name": "Update retains original uninstall backup chain",
+      "pass": true
+    },
+    {
+      "name": "Update replaces old trainer code",
+      "pass": true
+    },
+    {
+      "name": "Update adds new modules",
+      "pass": true
+    },
+    {
+      "name": "same-version Update is idempotent",
+      "pass": true
+    },
+    {
+      "name": "uninstall after Update restores pre-first-install settings",
+      "pass": true
+    },
+    {
+      "name": "uninstall after Update removes new and old owned trainer files",
+      "pass": true
+    },
+    {
+      "name": "previous-version install creates a real legacy receipt",
+      "pass": true
+    },
+    {
+      "name": "Update recovers a disabled trainer entry only by restoring its exact previously owned mod-list bytes",
+      "pass": true
+    },
+    {
+      "name": "disabled-entry recovery preserves the original uninstall backup chain",
+      "pass": true
+    },
+    {
+      "name": "uninstall after disabled-entry recovery restores the original installation",
+      "pass": true
+    },
+    {
+      "name": "previous-version install creates a real legacy receipt",
+      "pass": true
+    },
+    {
+      "name": "recovery still rejects unrelated mod-list edits without changing the list, trainer code or receipt",
+      "pass": true
+    },
+    {
+      "name": "previous-version install creates a real legacy receipt",
+      "pass": true
+    },
+    {
+      "name": "Update preserves edited trainer configuration",
+      "pass": true
+    },
+    {
+      "name": "uninstall after Update still preserves user edits",
+      "pass": true
+    },
+    {
+      "name": "previous-version install creates a real legacy receipt",
+      "pass": true
+    },
+    {
+      "name": "bad update package leaves old installation intact",
+      "pass": true
+    },
+    {
+      "name": "previous-version install creates a real legacy receipt",
+      "pass": true
+    },
+    {
+      "name": "Update refuses to overwrite edited implementation code",
+      "pass": true
+    },
+    {
+      "name": "previous-version install creates a real legacy receipt",
+      "pass": true
+    },
+    {
+      "name": "failed Update reports failure",
+      "pass": true
+    },
+    {
+      "name": "failed Update rolls back code and retains old receipt plus obstruction",
+      "pass": true
+    },
+    {
+      "name": "previous-version install creates a real legacy receipt",
+      "pass": true
+    },
+    {
+      "name": "Update can replace its own unchanged loader while preserving external-loader protection",
+      "pass": true
+    },
+    {
+      "name": "uninstall after loader upgrade retains original ownership semantics",
+      "pass": true
     }
   ],
   "source_sha256": {
-    "install.ps1": "03cce62e325cb92f2ad7a39036062c8ec4cb9e876dd3a07f3c54d6abeada8425",
+    "install.ps1": "bd858cd51a9e1ba39d6eaab734ee36806e1600f657a141196f59b0bd46d8b316",
     "uninstall.ps1": "d0bf32ae46c63b2bd7ea37936d4a1af6f5d669b6faab98ba96e8dd4a1b69b682",
     "Install.cmd": "a5b257cf493b255fc78183b3654cec51ab7a038d94f82befc52134d45345a8de",
-    "Uninstall.cmd": "b241e0c54ce8c9500b55b1d11c3d98d5e90fecd9b93dd55caf0a7e3e270f559d"
+    "Uninstall.cmd": "b241e0c54ce8c9500b55b1d11c3d98d5e90fecd9b93dd55caf0a7e3e270f559d",
+    "Update.cmd": "d510f8dd0fb46fce10eb67acfb9658e81e305465a637cf83d1ada47c23787d41",
+    "update.ps1": "90b5e56db98cba403bbb271b89f09bf0bd15ade7d5366fca70b48d6a2496f374"
   }
 }

@@ -1,10 +1,8 @@
-## 0.4.1 — F2 menu and vehicle fixes
+## 0.4.2 — level-loading crash recovery
 
-- **F2 opens/closes the menu; F3 cycles cars; F9 spawns; Home writes diagnostics.** Older configs automatically use the new reserved shortcuts.
-- **No trainer spawn cap.** Old `MaxVehicles` values are ignored, and the menu shows the live count.
-- Hide the extra original Ábel door meshes and their collision on converted model spawns, including after entering or exiting.
-- Correct reversed A/D steering on converted cars, including normal entry with the game's F key. The menu's **Steering correction** toggle restores original inputs when off.
-- Preserve each selected model's positive mesh scale before physics creation, removing the unit-scale refusal affecting hatchback, liftback, luxury and van selections.
-- Log the menu request and its first actual HUD draw separately to make display problems easier to identify.
+- Remove the four engine-wide steering, visibility and collision setter hooks introduced in 0.4.1 after reports of a fatal error while loading the level.
+- Maintain extra-door hiding only for converted trainer cars through the existing queued game-thread update.
+- Apply the **Keyboard steering fix** only to the locally controlled converted car while A/D is held. No converted-car maintenance starts before one is spawned.
+- Keep **F2 menu**, **F3 model selection**, **F9 spawning**, unlimited trainer spawns and positive model-scale support.
 
-Close the game and run **Update.cmd**, then spawn a new car. Existing map traffic and the original Ábel car keep their own doors and steering. Models must be loaded and have a compatible wheel rig; spawn in a clear area.
+Fully close the game and run **Update.cmd**. The update re-enables the trainer if you temporarily disabled it in `Mods\mods.txt`. Spawn a new car after entering the level.

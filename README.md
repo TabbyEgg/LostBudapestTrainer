@@ -1,4 +1,4 @@
-# Lost Budapest Trainer 0.4.1
+# Lost Budapest Trainer 0.4.2
 
 [**Download the latest ZIP from Releases**](https://github.com/TabbyEgg/LostBudapestTrainer/releases/latest)
 
@@ -26,6 +26,16 @@ package upgrade, use `install.ps1 -Update -GameDirectory 'your game folder'`.
 
 **Uninstall.cmd** removes/restores files recorded in the receipt. Edited files
 are retained for review. Keep the receipt and backup folder in the game folder.
+
+## Recovery from the 0.4.1 loading crash
+
+Close the game and run **Update.cmd**. Version 0.4.2 removes the engine-wide
+steering, visibility and collision setter hooks added in 0.4.1. Converted-car
+adjustments now run only through the trainer's queued game-thread update, after
+a converted car exists. The updater also re-enables the trainer if you disabled
+its entry in `Mods\mods.txt`.
+
+To temporarily disable the trainer, set `LostBudapestNoclip : 0` in that file.
 
 ## Menu
 
@@ -97,8 +107,9 @@ same player controls, speedometer, radio and camera setup as Abel's car.
 
 Converted models hide the separate original Ábel door meshes and their collision,
 so entering or exiting cannot reveal an extra open door panel. Doors that are part
-of the selected body stay with that body. **Steering correction** defaults on for
-these converted cars, including normal game entry with F. Toggle it in the menu,
+of the selected body stay with that body. **Keyboard steering fix** defaults on for
+these converted cars, including normal game entry with F. It corrects held A/D
+input and leaves native analog input alone when neither key is held. Toggle it in the menu,
 or set `InvertVehicleSteering = false` in `config.lua` to retain original inputs.
 
 This applies to new trainer spawns. Existing map traffic and the original Abel
