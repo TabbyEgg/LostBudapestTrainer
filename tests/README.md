@@ -93,3 +93,8 @@ rollback/rebuild retries without save calls, footprint pre/post-teleport checks
 that reject roof stacking, component-lookup fallback preserving interaction
 queries, and queued-action coalescing/cooldowns. These model native contracts;
 they do not establish visible pixels, live truck entry or steering in Windows.
+
+0.4.5 models the pinned nil-UObject argument consumption defect: the nil font
+leaves FontScale0, while real UFont userdata preserves the requested positive
+scale. Cases cover font resolution/cache replacement, missing-font input cleanup,
+no startup loads and optional inspection of the native queued FontScale.

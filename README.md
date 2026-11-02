@@ -1,4 +1,4 @@
-# Lost Budapest Trainer 0.4.4
+# Lost Budapest Trainer 0.4.5
 
 [**Download the latest ZIP from Releases**](https://github.com/TabbyEgg/LostBudapestTrainer/releases/latest)
 
@@ -42,6 +42,7 @@ To temporarily disable the trainer, set `LostBudapestNoclip : 0` in that file.
 Press **F2** in a loaded level to open or close the keyboard menu.
 Use **Up/Down** to select, **Left/Right** to adjust a speed or model, **Enter**
 to activate and **Backspace** to close. The selected row starts with `>`.
+The menu supplies a real game font so the bundled SDK preserves its text scale.
 The menu displays all trainer features and their live values as text over the
 game. It does not use mouse clicks.
 

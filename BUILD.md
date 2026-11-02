@@ -25,7 +25,7 @@ Run `python tools/package.py` to verify the recorded source identities and
 dependency bytes, regenerate the payload manifest and create the release ZIP.
 The game EXE and research toolchains are excluded from releases.
 
-Current results: **358 Lua assertions and 61 installer assertions pass**.
+Current results: **366 Lua assertions and 61 installer assertions pass**.
 The actual runtime payload was also installed and removed in an isolated
 filesystem fixture, leaving the original game EXE unchanged. The loader proxy
 exports every DWM function imported by the supplied game EXE.
@@ -36,7 +36,7 @@ picker or Windows PowerShell 5.1 session was executed. The initial build needs
 an in-game check; the reported assertion counts do not establish that it works
 in the actual game.
 
-Version 0.4.4 uses a temporary native vehicle template profile during synchronous
+Version 0.4.5 uses a temporary native vehicle template profile during synchronous
 actor construction. Model mesh/animation/physics and wheel data are installed
 before physics initialization, then the exact original template is restored.
 Cases exercise one-based UE4SS arrays without resizing, incompatible rigs,
@@ -100,3 +100,19 @@ truck entry selector now uses tracked references within25m. Footprint tests
 reject roof stacks even when native TeleportTo reports success; native bounds
 use struct output tables, with a conservative6mx3m fallback. Hotkey tests cover
 pending coalescing and cooldown reset. No Windows game is executed here.
+
+0.4.5 addresses another concrete v3.0.1 stack-consumption defect. In
+LuaUObject.cpp381-408, ObjectProperty.Set consumes userdata but leaves nil on
+the stack. The next FloatProperty.Set reads nil via get_float (865-866), which
+LuaMadeSimple.cpp569-574 converts to0 and consumes. The previous AddDebugText
+call passed nil InFont before FontScale; it therefore submitted invisible
+zero-scale text even though ProcessEvent returned successfully. The supplied
+0.4.4 log confirms successful submissions without a Lua error; it does not
+itself contain an observed native FontScale value.
+
+The adapter now selects a valid non-CDO UFont, preserving the following scalar
+arguments. No font searches or loads occur during module startup. Cache reuse,
+invalid-font reacquisition, missing-font cleanup and the exact defective tail
+marshaling are modeled. Optional native DebugTextList inspection records the
+actual scale and rejects a readable zero scale; metadata-read failures are
+nonfatal. These checks do not observe pixels in the Windows game.

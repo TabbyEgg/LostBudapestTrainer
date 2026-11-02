@@ -1,10 +1,7 @@
-## 0.4.4 — menu viewport, truck entry and steering fixes
+## 0.4.5 — invisible menu font fix
 
-- Fix the viewport-size read that stopped F2 before the menu could be submitted. Keep **arrows / Enter** navigation, visible **F3** selection and **F9** spawning.
-- Let **F5** select tracked trainer cars up to 25 metres away, including trucks placed beyond the old 12-metre limit.
-- Correct alternate-model A/D through the native runtime key mappings, then restore normal mappings on exit, pause, menu or disable. No input configuration is saved.
-- Reject spawn positions above or intersecting another vehicle, using body footprints before and after engine adjustment.
-- Combine duplicate pending actions and limit F9 attempts to one every 0.75 seconds, while keeping unlimited total spawning.
-- Add a door-component lookup fallback and preserve interaction queries on hidden panels.
+- Supply a real font object to the native HUD text call. The bundled SDK leaves a nil font argument unconsumed, causing the following font scale to become zero.
+- Reuse an available engine font, with standard font-asset fallbacks.
+- Log the requested and native text scale where the HUD queue can be inspected, and reject a verified zero-scale submission before locking controls.
 
-Fully quit the game and run **Update.cmd**, then restart and load your usual save. **F2** opens the menu; **F5** enters/exits a nearby trainer car.
+Fully quit the game and run **Update.cmd**, then load the level and press **F2** once. **Arrows** select/adjust and **Enter** activates. Other trainer features retain their v0.4.4 behavior.

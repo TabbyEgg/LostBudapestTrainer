@@ -1,11 +1,11 @@
 {
   "install": {
     "exit": 0,
-    "output": "Lost Budapest Noclip installed/updated. Start the game normally; F6 toggles noclip.\nReceipt and original-file backups are in: /workspace/lost-budapest-research/lbn-044-payload-az1glvx1/game/Eltunt_Budapest3/Binaries/Win64\n"
+    "output": "Lost Budapest Noclip installed/updated. Start the game normally; F6 toggles noclip.\nReceipt and original-file backups are in: /workspace/lost-budapest-research/lbn-045-payload-8wlvoezo/game/Eltunt_Budapest3/Binaries/Win64\n"
   },
   "update": {
     "exit": 0,
-    "output": "Lost Budapest Noclip installed/updated. Start the game normally; F6 toggles noclip.\nReceipt and original-file backups are in: /workspace/lost-budapest-research/lbn-044-payload-az1glvx1/game/Eltunt_Budapest3/Binaries/Win64\nUpdate complete. Start the game normally.\n"
+    "output": "Lost Budapest Noclip installed/updated. Start the game normally; F6 toggles noclip.\nReceipt and original-file backups are in: /workspace/lost-budapest-research/lbn-045-payload-8wlvoezo/game/Eltunt_Budapest3/Binaries/Win64\nUpdate complete. Start the game normally.\n"
   },
   "disabled_trainer_reenabled_by_update": true,
   "actual_payload_files_installed": true,
@@ -17,5 +17,5 @@
   "game_bytes_unchanged": true,
   "removal_left_only_original_game_exe": true,
   "windows_game_executed": false,
-  "host": "PowerShell 7.6.9 on Linux; exact 0.4.4 payload of fifteen files install/disabled-entry update/uninstall"
+  "host": "PowerShell 7.6.9 on Linux; exact 0.4.5 payload install/disabled-entry update/uninstall"
 }

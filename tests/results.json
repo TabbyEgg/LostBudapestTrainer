@@ -1,14 +1,14 @@
 {
-  "assertions": 358,
+  "assertions": 366,
   "failures": 0,
   "lua_implementation": "Lua 5.4",
   "production_source_sha256": {
-    "Runtime/Mods/LostBudapestNoclip/Scripts/adapter.lua": "fe718589ed39a766e746adc5eeb2ec39b3067bb3b27e23eed5ccda12d53b148a",
+    "Runtime/Mods/LostBudapestNoclip/Scripts/adapter.lua": "3d1f2788be6f8b329ab0b0a4ef78a7f5fd03feb0ddf51529cfd495b968e49bc9",
     "Runtime/Mods/LostBudapestNoclip/Scripts/config.lua": "fd85cc59a21a3d411397838d7a05fae03dc8dbe1d623bffd0a5982bc45007ac9",
     "Runtime/Mods/LostBudapestNoclip/Scripts/controller.lua": "15f19f82eedae42916a788c541e0e6e5d50cf31fed403e8622a03d8333314871",
     "Runtime/Mods/LostBudapestNoclip/Scripts/main.lua": "1c6fd60437e9809a148fb4c238b661c3807f6c2d27688a3031fe0531e1eb5f8f",
-    "Runtime/Mods/LostBudapestNoclip/Scripts/menu.lua": "541a51b45cfc375ebfdd780c51d926732e399e31a635ee80f70211f440ed9b9b",
-    "Runtime/Mods/LostBudapestNoclip/Scripts/menu_engine.lua": "68440641bdc648b7969616ce44fc4d5b628e6b268e3b24363bf8544ef696a589",
+    "Runtime/Mods/LostBudapestNoclip/Scripts/menu.lua": "8f7331e36b9bbd6d088295e5c05ef869a65e4f72040458dcb33c46c5ff03e842",
+    "Runtime/Mods/LostBudapestNoclip/Scripts/menu_engine.lua": "7e2dc1990ad8d6099558be3db6a02b7529f98c11a95d7d06e216129a30398287",
     "Runtime/Mods/LostBudapestNoclip/Scripts/native_spawn.lua": "1ebf989f644d750eb775bd770270cd9e7330f955825d90a8eb9e5cdefbb147dc",
     "Runtime/Mods/LostBudapestNoclip/Scripts/player_vehicle.lua": "1c6a80f049f9f3f1b36bcedb46bba63a10216d08f388f8b1205a91f60691496a",
     "Runtime/Mods/LostBudapestNoclip/Scripts/protection.lua": "33a9dd48b59ff28606b5fb416bf89da78b7bd86c2070c095309d23f8ef44621c",
@@ -18,9 +18,9 @@
   },
   "harness_sha256": {
     "run.py": "49d4775de07242675295d374d9a08e048c3093573b696c0def8cd87f2fc2cd85",
-    "menu_regressions.lua": "da0d8e9cda62c76769fe906358f9c7c59436c06ba97eef958d7be617a38a241f",
+    "menu_regressions.lua": "c97f6815ae44613f50d3e026538223bc2409c083fb8f612f8e922115d599c861",
     "player_vehicle_regressions.lua": "fc502635940cfe5a69ee227dcf027eff11923a0bf0d2dad12e79017487b405c6",
-    "regressions.lua": "ee036582c51af86ddb3262a1ed2085834f3a473736ff8de0cc914cf5eaec7dd7",
+    "regressions.lua": "10b6b02a55f5ae7700beb33cfde12710ab4e4fd6019c76c2ca1847f619f63bf3",
     "spawn_regressions.lua": "ccf541a40ad981ba21333816bf43d6ff0f3504c87c6594182de80e4b5157b443",
     "steering_regressions.lua": "f7f3e78626733a62acfa828fbb25a7ff1350dc377dc9f9f0e678e797dcda6b0e",
     "vehicle_regressions.lua": "167e7be74766eb458c6c5672cc425bb407d647ca092c5f0f2ec7c715fbbb953f"

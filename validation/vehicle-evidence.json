@@ -1,5 +1,5 @@
 {
-  "version": "0.4.4",
+  "version": "0.4.5",
   "log_sha256": "cd98db0c89ba82dea5c3c812cf614c69c4e49af85e1f09066adc375e95275b94",
   "scope": "Only class identities are recorded; original user log and game EXE are not redistributed.",
   "player_car": "/Game/Autok/Abel_Car.Abel_Car_C",
@@ -97,5 +97,16 @@
     "Planar footprint separation before and after native adjustment.",
     "Pending action coalescing and F9 cooldown0.75s.",
     "Owned component-list fallback; hidden door retains query-only interaction collision."
+  ],
+  "invisible_menu_044_log_sha256": "a47427bca87ff5bc5b14e4e187dcc9f424ec768ab4ed90bbcae8e2aeb6a33bfa",
+  "invisible_menu_044_observations": [
+    "v0.4.4 reaches Menu submitted to native HUD text renderer; no viewport guard failure follows.",
+    "User reports no visible text even with accepted submissions.",
+    "Pinned SDK source leaves nil UObject parameters unconsumed; following FloatProperty.Set reads nil as0. Prior call passes nil InFont before FontScale."
+  ],
+  "changes_045": [
+    "Pass real non-CDO UFont to native AddDebugText so FontScale is not shifted to0.",
+    "Engine/loaded-font selection and known standard asset fallbacks on game thread only.",
+    "Optional native queue scale inspection and diagnostic log, with zero-scale guard before input locks."
   ]
 }

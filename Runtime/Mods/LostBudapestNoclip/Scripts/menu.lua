@@ -52,7 +52,7 @@ function Menu:activate(row,direction)
     self.request(action)
 end
 function Menu:contents()
-    local lines={'LOST BUDAPEST TRAINER 0.4.4','F2 / Backspace: close | Arrows: select / adjust | Enter: activate',''}
+    local lines={'LOST BUDAPEST TRAINER 0.4.5','F2 / Backspace: close | Arrows: select / adjust | Enter: activate',''}
     for i,row in ipairs(self:rows())do lines[#lines+1]=(i==self.selected and '> ' or '  ')..row.label..'  ['..row.value..']'end
     lines[#lines+1]='';lines[#lines+1]='F3: next car | F9: spawn selected'
     for i=1,3 do lines[#lines+1]=self.message:sub((i-1)*70+1,i*70)end

@@ -242,6 +242,10 @@ local function engine()
     f.movement={valid=true,MovementMode=1,CustomMovementMode=0}
     f.pawn.CharacterMovement=f.movement;f.pc.Pawn=f.pawn
     f.pc.IsValid=valid;f.pawn.IsValid=valid;f.movement.IsValid=valid
+    local fontClass={IsValid=valid,GetFullName=function()guard('FontClassName');return 'Class /Script/Engine.Font'end}
+    f.font={IsValid=valid,GetFullName=function()guard('FontName');return 'Font /Engine/Test.MenuFont'end,GetClass=function()guard('FontClass');return fontClass end}
+    f.fontEngine={IsValid=valid,GetFullName=function()guard('EngineName');return 'GameEngine /Engine.Transient.GameEngine_0'end,SmallFont=f.font}
+
     function f.pc:GetAddress()guard('GetAddress');return 0x5000 end
     function f.pc:GetFullName()guard('GetFullName');return 'PlayerController /World.PC'end
     function f.pc:IsLocalController()guard('IsLocalController');return self.localController end
@@ -289,7 +293,7 @@ local function engine()
     function f.load()
         package.loaded.adapter=nil;package.loaded.vehicle_engine=nil;package.loaded.menu_engine=nil
         Key={HOME=36,INS=45,F1=112,F2=113,F3=114,F4=115,F5=116,F6=117,F7=118,F8=119,F9=120,F10=121};EFindName={FNAME_Find=0}
-        FindAllOf=function(name)guard('FindAllOf');if name=='HUD' then return f.huds or {}end;assert(name=='PlayerController');return f.controllers or {f.pc} end
+        FindAllOf=function(name)guard('FindAllOf');if name=='HUD' then return f.huds or {}end;if name=='GameEngine' then return {f.fontEngine}end;assert(name=='PlayerController');return f.controllers or {f.pc} end
         StaticFindObject=function(path)guard('StaticFindObject');assert(path=='/Script/Engine.Default__GameplayStatics');return f.statics end
         FName=function(name,mode)
             guard('FName');assert(type(name)=='string' and mode==EFindName.FNAME_Find,'input names must use find-only FName lookup')
@@ -381,7 +385,7 @@ case('F2 opens the native HUD menu without script drawing callbacks',function()
     function hud:IsValid()return true end
     function hud:GetAddress()return 0x6000 end
     function hud:GetFullName()return 'HUD /World.HUD'end
-    function hud:AddDebugText(text,source,duration)assert(f.inGame and source==self and duration==.5);f.menuText=text end
+    function hud:AddDebugText(text,source,duration,offset,desired,color,skip,absolute,attached,font,scale)assert(f.inGame and source==self and duration==.5 and font==f.font and scale>0);f.menuText=text end
     function hud:RemoveDebugText(source,leave)assert(f.inGame and source==self and leave==false);f.menuCleared=true end
     f.hud=hud;f.press('F2');f.step(0)
     check(next(f.hudCallbacks)==nil and f.menuText and f.menuText:find('LOST BUDAPEST TRAINER',1,true),'F2 submits directly through native HUD without registering ReceiveDrawHUD/ubergraph events')

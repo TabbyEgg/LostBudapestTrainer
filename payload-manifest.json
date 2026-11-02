@@ -4,7 +4,7 @@
     {
       "path": "Mods/LostBudapestNoclip/Scripts/adapter.lua",
       "size": 11202,
-      "sha256": "fe718589ed39a766e746adc5eeb2ec39b3067bb3b27e23eed5ccda12d53b148a"
+      "sha256": "3d1f2788be6f8b329ab0b0a4ef78a7f5fd03feb0ddf51529cfd495b968e49bc9"
     },
     {
       "path": "Mods/LostBudapestNoclip/Scripts/config.lua",
@@ -24,12 +24,12 @@
     {
       "path": "Mods/LostBudapestNoclip/Scripts/menu.lua",
       "size": 5264,
-      "sha256": "541a51b45cfc375ebfdd780c51d926732e399e31a635ee80f70211f440ed9b9b"
+      "sha256": "8f7331e36b9bbd6d088295e5c05ef869a65e4f72040458dcb33c46c5ff03e842"
     },
     {
       "path": "Mods/LostBudapestNoclip/Scripts/menu_engine.lua",
-      "size": 3370,
-      "sha256": "68440641bdc648b7969616ce44fc4d5b628e6b268e3b24363bf8544ef696a589"
+      "size": 6306,
+      "sha256": "7e2dc1990ad8d6099558be3db6a02b7529f98c11a95d7d06e216129a30398287"
     },
     {
       "path": "Mods/LostBudapestNoclip/Scripts/native_spawn.lua",

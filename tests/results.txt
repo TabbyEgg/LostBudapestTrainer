@@ -38,7 +38,8 @@ PASS: native vehicle adapter uses native spawn helper, health guard and reversib
 PASS: native text menu does not depend on a Blueprint canvas event
 PASS: native menu keyboard edges dispatch actions after restoring input
 PASS: native text failure and partial input capture never leave controls blocked
-PASS: native HUD queue uses flat reflected parameters and owns only its text entry
+PASS: nil UObject before trailing parameters reproduces the pinned zero-font-scale bug
+PASS: native HUD queue passes a real font and owns only its text entry
 PASS: stable-loader native spawn avoids FTransform marshaling and restores all temporary state
 PASS: vehicle footprints reject stacking before and after native destination adjustment
 PASS: selected bodies are constructed on Abel player Blueprint with matching animation and wheel rig
@@ -51,4 +52,4 @@ PASS: cosmetic door API failure does not discard a validated selected car
 PASS: partial template changes and failed construction always restore the native setup
 PASS: runtime source rigs can supply construction-only assets without sharing mutable paint
 PASS: vehicle model routing chooses the native player template and preserves explicit legacy mode
-RESULT: 358 assertions; 0 failures.
+RESULT: 366 assertions; 0 failures.
