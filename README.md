@@ -1,4 +1,4 @@
-# Lost Budapest Trainer 0.4.3
+# Lost Budapest Trainer 0.4.4
 
 [**Download the latest ZIP from Releases**](https://github.com/TabbyEgg/LostBudapestTrainer/releases/latest)
 
@@ -88,11 +88,13 @@ F4 toggles manual protection; flight applies the guard automatically.
 Spawn selection: **Abel's car** (default), estate, hatchback, liftback, luxury,
 van 1 and van 2. Models must already be loaded in the current level.
 Only already-loaded blueprints are used. **There is no trainer spawn cap**; old
-`MaxVehicles` settings are ignored. The menu shows the live spawned count.
+`MaxVehicles` settings are ignored. The menu shows the live spawned count. Repeated queued spawn requests are
+combined, with 0.75 seconds between F9 attempts.
 Spawning many vehicles still consumes game memory and physics resources. A spawn only counts after its actual position
 is checked. Blocked placements try up to 40 positions around you, out to 20 metres. The
 engine checks each destination and may adjust it to fit, rather than sweeping a
-path through curbs or parked cars. All rejected attempts
+path through curbs or parked cars. Vehicle footprints are checked before and
+after adjustment, so a car cannot be accepted on another car's roof. All rejected attempts
 remove the failed car rather than leaving it near the player. Spawn in a clear
 area. Failed spawns report the model and reason in the menu message and log.
 
@@ -104,14 +106,16 @@ body, animation, physics asset and wheel rig. This gives compatible models the
 same player controls, speedometer, radio and camera setup as Abel's car.
 
 Converted models hide the separate original Ábel door meshes and their collision,
-so entering or exiting cannot reveal an extra open door panel. Doors that are part
+while retaining query collision for interaction. Component lookup can fall back
+to the SDK object list if the component-array call is unavailable. Doors that are part
 of the selected body stay with that body. **Keyboard steering fix** defaults on for
-these converted cars, including normal game entry with F. It corrects held A/D
-input and leaves native analog input alone when neither key is held. Toggle it in the menu,
+these converted cars, including normal game entry with F. It updates the native A/D axis mappings used by the car, while leaving gamepad
+entries unchanged. Normal runtime mappings are restored when you exit, pause,
+open the trainer menu or disable the fix; no input settings are saved to disk. Toggle it in the menu,
 or set `InvertVehicleSteering = false` in `config.lua` to retain original inputs.
 
 This applies to new trainer spawns. Existing map traffic and the original Abel
-car are left alone. Stand on foot within 12 metres and press **F5** to enter or
+car are left alone. Stand on foot within **25 metres** and press **F5** to enter or
 exit a spawned car. Turn noclip off before entry.
 
 A model must have a loaded animated body, matching wheel count, valid wheel

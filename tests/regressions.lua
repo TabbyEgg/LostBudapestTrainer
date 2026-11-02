@@ -250,7 +250,7 @@ local function engine()
     function f.pc:SetIgnoreMoveInput(value)guard('SetIgnoreMoveInput');f.moveLocks=(f.moveLocks or 0)+(value and 1 or -1)end
     function f.pc:SetIgnoreLookInput(value)guard('SetIgnoreLookInput');f.lookLocks=(f.lookLocks or 0)+(value and 1 or -1)end
     function f.pc:GetHUD()guard('GetHUD');return f.hud end
-    function f.pc:GetViewportSize(x,y)guard('GetViewportSize');x.SizeX=1280;y.SizeY=768 end
+    function f.pc:GetViewportSize(x,y)guard('GetViewportSize');x.SizeX=1280;x.SizeY=768 end
     function f.pc:DeprojectScreenPositionToWorld(x,y,origin,direction)guard('Deproject');origin.X=0;origin.Y=0;origin.Z=100;direction.X=1;direction.Y=0;direction.Z=0;return true end
     function f.pc:GetMousePosition()guard('GetMousePosition');return false end
     function f.pc:GetControlRotation()guard('GetControlRotation');return f.rotation end
@@ -389,6 +389,21 @@ case('F2 opens the native HUD menu without script drawing callbacks',function()
     f.press('F2');f.step(.02)
     check(f.menuCleared and f.moveLocks==0 and f.lookLocks==0,'F2 closes native text and restores both input counters')
     f.finish()
+end)
+
+case('duplicate and rapid spawn shortcuts cannot flood the placement queue',function()
+    local Vehicles=require('vehicles');local original=Vehicles.spawn;local calls=0
+    Vehicles.spawn=function()calls=calls+1;return true end
+    local f=engine();f.load()
+    local ok,err=pcall(function()
+        for i=1,12 do f.press('F9')end;f.step(0)
+        check(calls==1,'duplicates pending before one update coalesce into one spawn request')
+        f.press('F9');f.step(.2);check(calls==1,'rapid repeated spawn actions wait for the spawn interval')
+        f.step(.6);f.press('F9');f.step(0);check(calls==2,'a later deliberate spawn is still permitted without a vehicle cap')
+        f.inGame=true;f.restart();f.inGame=false;f.press('F9');f.step(.1)
+        check(calls==3,'restart clears the old action cooldown state')
+    end)
+    f.finish();Vehicles.spawn=original;if not ok then error(err)end
 end)
 
 case('held hotkeys cannot repeatedly toggle god mode',function()
@@ -565,6 +580,7 @@ case('god mode and post-flight landing guard preserve original damage permission
     p:reset();check(current.damage and not p:hasWork(),'restart restores original permission and disables god mode')
 end)
 
+dofile(TRAINER_ROOT..'/tests/steering_regressions.lua')(check,case)
 dofile(TRAINER_ROOT..'/tests/vehicle_regressions.lua')(check,case)
 dofile(TRAINER_ROOT..'/tests/menu_regressions.lua')(check,case)
 dofile(TRAINER_ROOT..'/tests/spawn_regressions.lua')(check,case)

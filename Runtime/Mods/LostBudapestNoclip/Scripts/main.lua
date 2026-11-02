@@ -8,10 +8,26 @@ local vehicles=require("vehicles").new(vehicleEngine)
 local actions, queued = {}, false
 local heldKeys={}
 local usedKeys={}
+local lastActionTimes={}
+local actionDelays={spawnVehicle=.75,cycleVehicle=.18,previousVehicle=.18}
 
 local function request(action,key)
     -- Input callbacks and the async loop never access Unreal objects.
+    for _,item in ipairs(actions)do
+        if (type(item)=="table" and item.name or item)==action then return end
+    end
     if #actions < 16 then actions[#actions + 1] = key and {name=action,key=key} or action end
+end
+
+local function actionReady(action,key)
+    local delay=key and actionDelays[action]
+    if not delay then return true end
+    local ok,now=pcall(function()local ctx=adapter.playerContext();return ctx and adapter.time(ctx)end)
+    if not ok or type(now)~="number" or now~=now then return true end
+    local previous=lastActionTimes[action]
+    if previous and now>=previous and now-previous<delay then return false end
+    lastActionTimes[action]=now
+    return true
 end
 
 local function bind(name,action,fallback)
@@ -74,7 +90,7 @@ LoopAsync(16, function()
                 for _, item in ipairs(pending) do
                     local action=type(item)=="table" and item.name or item
                     local key=type(item)=="table" and item.key or nil
-                    if not key or not heldKeys[key] then
+                    if (not key or not heldKeys[key]) and actionReady(action,key) then
                     if key then heldKeys[key]=true end
                     if action=="toggle" or action=="return" or action=="drive" or action=="repair" or action=="spawnVehicle" or action=="diagnose" then menu:close() end
                     if action=="menu" then menu:toggle()
@@ -133,7 +149,9 @@ if type(RegisterHook) == "function" then
     -- optional LoadMapPre callback has an upstream argument-count defect.
     local ok, err = pcall(RegisterHook, "/Script/Engine.PlayerController:ClientRestart", function()
         actions = {}
+        vehicleEngine.resetSteering()
         heldKeys={}
+        lastActionTimes={}
         menu:close()
         controller:disable(false)
         local keepGod=protection.manual

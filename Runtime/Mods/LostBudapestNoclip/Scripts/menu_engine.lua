@@ -38,8 +38,11 @@ end
 function Engine.present(saved,text,duration)
     local hud=saved.pc:GetHUD()
     assert(valid(hud) and valid(hud.PlayerOwner) and id(hud.PlayerOwner)==saved.pcId,'The local player has no native HUD')
-    local sx,sy={},{};saved.pc:GetViewportSize(sx,sy)
-    local width,height=sx.SizeX,sy.SizeY
+    -- UE4SS 3.0.1 doesn't consume scalar out-parameter tables: both values
+    -- are written into the first one. One shared table supports that ABI and
+    -- engines/loaders that correctly consume each supplied output argument.
+    local size={};saved.pc:GetViewportSize(size,size)
+    local width,height=size.SizeX,size.SizeY
     assert(finite(width) and finite(height) and width>=320 and height>=240,'The game viewport is unavailable')
     local origin,direction={},{}
     assert(saved.pc:DeprojectScreenPositionToWorld(32,40,origin,direction) and vector(origin) and vector(direction),'Could not position native HUD menu')

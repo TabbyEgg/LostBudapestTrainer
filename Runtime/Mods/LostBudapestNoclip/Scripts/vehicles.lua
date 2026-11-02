@@ -33,7 +33,7 @@ function Vehicles:drive()
     local state
     local ok,err=pcall(function()
         local ctx=assert(self.api.player(),"Enter a level on foot first")
-        local target=assert(self.api.repairTarget(ctx,self.spawned),"Stand near Abel's car or a trainer-spawned car")
+        local target=assert((self.api.entryTarget or self.api.repairTarget)(ctx,self.spawned),"Stand within 25 metres of a trainer car (12 metres for Abel's original car)")
         state=self.api.captureDriver(ctx,target)
         self.api.enterDriver(state)
         self.driver=state;self.driverFailed=false

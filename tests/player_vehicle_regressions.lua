@@ -73,14 +73,14 @@ local function fixture()
     f.meshClass=object("Class /Script/Engine.MeshComponent")
     f.cheatClass=object('Class /Script/Engine.CheatManager');f.cheats=object('SpawnHelper')
     function f.clone()
-        local a=object('NewPlayerCar');a.Mesh=mesh('NewPlayerMesh',f.player.Mesh.SkeletalMesh,f.player.Mesh.AnimClass,
+        local a=object('Abel_Car_C /World.NewCar');a.position={X=50,Y=0,Z=90};a.Mesh=mesh('NewPlayerMesh',f.player.Mesh.SkeletalMesh,f.player.Mesh.AnimClass,
             f.player.Mesh.PhysicsAssetOverride,{f.nativeMaterial,f.nativeMaterial})
         a.Mesh.AnimationMode=f.player.Mesh.AnimationMode
         local scale=f.player.Mesh.RelativeScale3D
         a.Mesh.RelativeScale3D={X=scale.X,Y=scale.Y,Z=scale.Z}
         function a.Mesh:GetOwner()return a end
         a.components={a.Mesh}
-        function a:GetComponentsByClass(class)assert(class==f.meshClass);if f.failDoors then error("door metadata unavailable")end;return self.components end
+        function a:GetComponentsByClass(class)assert(class==f.meshClass);if f.failDoors or f.failComponentQuery then error("door metadata unavailable")end;if f.failArrayDecode then return {GetArrayNum=function()error("component array unavailable")end}end;return self.components end
         if f.doors then
             local door=object('StaticMeshComponent /World.NewCar.DoorLeft')
             door.visible=true;door.hidden=false;door.bVisible=true;door.bHiddenInGame=false;door.collision=1;door.writes=0
@@ -127,7 +127,17 @@ local function fixture()
         f.actors[#f.actors+1]=a;f.created=a
     end
     f.oldFind,f.oldStatic,f.oldConstruct=FindAllOf,StaticFindObject,StaticConstructObject
-    FindAllOf=function(kind)assert(kind=='WheeledVehicle');return f.actors end
+    FindAllOf=function(kind)
+        if kind=='WheeledVehicle' then return f.actors end
+        assert(kind=='StaticMeshComponent' or kind=='SkeletalMeshComponent')
+        if f.failDoors then error('component enumeration unavailable')end
+        local result={}
+        for _,actor in ipairs(f.actors)do for _,entry in ipairs(actor.components or {})do
+            local part=entry.get and entry:get() or entry
+            result[#result+1]=part
+        end end
+        return result
+    end
     StaticFindObject=function(path)if path=='/Script/Engine.MeshComponent' then return f.meshClass end;assert(path=='/Script/Engine.CheatManager');return f.cheatClass end
     StaticConstructObject=function(class,outer)assert(class==f.cheatClass and outer==f.pc);return f.cheats end
     function f.spawn(profile)
@@ -206,11 +216,11 @@ case('converted models hide only the extra door components and keep them hidden 
     runFixture(function(f)
         f.doors=true
         local actor=f.spawn(Profile.new(f.sourceClass,f.playerClass))
-        check(not actor.door.visible and actor.door.hidden and actor.door.collision==0,'separate original door panel and its collision are disabled')
+        check(not actor.door.visible and actor.door.hidden and actor.door.collision==1,'extra door is hidden and retains interaction queries without physical collision')
         check(actor.Mesh.SkeletalMesh==f.selectedBody and actor.driver.alive,'selected body and driver are retained')
         actor.door.bVisible=true;actor.door.bHiddenInGame=false;actor.door.collision=3
         Profile.maintainDoors()
-        check(not actor.door.bVisible and actor.door.bHiddenInGame and actor.door.collision==0,'queued maintenance re-hides a panel revealed by original door animation')
+        check(not actor.door.bVisible and actor.door.bHiddenInGame and actor.door.collision==1,'queued maintenance re-hides a panel revealed by original door animation')
         local writes=actor.door.writes;Profile.maintainDoors()
         check(actor.door.writes==writes,'already hidden doors are not rewritten every update')
         check(Profile.convertedMovement(actor)==actor.VehicleMovement and Profile.convertedMovement(f.pawn)==nil,'steering resolves only the saved movement of the converted car')
@@ -225,6 +235,21 @@ case('converted models hide only the extra door components and keep them hidden 
         actor.alive=false
         Profile.maintainDoors()
         check(not Profile.steeringTarget(actor) and not Profile.hasWork(),'destroyed converted cars are pruned and stop the maintenance pump')
+    end)
+end)
+case('door hiding can enumerate owned components when native array marshaling fails',function()
+    runFixture(function(f)
+        f.doors=true;f.failComponentQuery=true
+        local profile=Profile.new(f.sourceClass,f.playerClass);local actor=f.spawn(profile)
+        check(profile.hiddenDoorCount==1 and not profile.doorWarning and actor.door.hidden,'owned door fallback hides the panel without the failing native component array')
+        check(actor.door.collision==1 and actor.driver.alive,'interaction queries and the driver remain available')
+    end)
+end)
+case('component array decoding failures also use the owned-object fallback',function()
+    runFixture(function(f)
+        f.doors=true;f.failArrayDecode=true
+        local profile=Profile.new(f.sourceClass,f.playerClass);local actor=f.spawn(profile)
+        check(profile.hiddenDoorCount==1 and not profile.doorWarning and actor.door.hidden,'an unreadable return array cannot bypass the stable owned-component fallback')
     end)
 end)
 case('cosmetic door API failure does not discard a validated selected car',function()
@@ -275,7 +300,7 @@ case('partial template changes and failed construction always restore the native
 end)
 case('runtime source rigs can supply construction-only assets without sharing mutable paint',function()
     runFixture(function(f)
-        local live=f.clone();live.Mesh.SkeletalMesh=f.selectedBody;live.Mesh.AnimClass=f.selectedAnimation;live.Mesh.PhysicsAssetOverride=f.selectedPhysics
+        local live=f.clone();live.position={X=-2000,Y=0,Z=90};live.Mesh.SkeletalMesh=f.selectedBody;live.Mesh.AnimClass=f.selectedAnimation;live.Mesh.PhysicsAssetOverride=f.selectedPhysics
         live.VehicleMovement.WheelSetups=f.source.VehicleMovement.WheelSetups
         function live:GetClass()return f.sourceClass end
         local dynamic={Parent=f.selectedMaterial,IsValid=function()return true end,GetClass=function()return{GetFullName=function()return 'Class /Script/Engine.MaterialInstanceDynamic'end}end}

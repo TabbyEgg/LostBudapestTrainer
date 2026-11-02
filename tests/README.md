@@ -86,3 +86,10 @@ parameters, exact AddDebugText flags, keyed cleanup, no startup polling, input
 edges and balanced locks on failed submission. Spawn checks exercise destination
 teleport adjustment, player separation, rejection cleanup and staged opaque
 errors. Cosmetic door API failure cannot invalidate a matched native vehicle.
+
+0.4.4 adds the actual stable-loader scalar-out behavior to the menu boundary,
+tracked-car entry selection through25m, native input mapping transactions and
+rollback/rebuild retries without save calls, footprint pre/post-teleport checks
+that reject roof stacking, component-lookup fallback preserving interaction
+queries, and queued-action coalescing/cooldowns. These model native contracts;
+they do not establish visible pixels, live truck entry or steering in Windows.

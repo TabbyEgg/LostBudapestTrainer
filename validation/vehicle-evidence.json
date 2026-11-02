@@ -1,5 +1,5 @@
 {
-  "version": "0.4.3",
+  "version": "0.4.4",
   "log_sha256": "cd98db0c89ba82dea5c3c812cf614c69c4e49af85e1f09066adc375e95275b94",
   "scope": "Only class identities are recorded; original user log and game EXE are not redistributed.",
   "player_car": "/Game/Autok/Abel_Car.Abel_Car_C",
@@ -81,5 +81,21 @@
     "Collision-checked K2_TeleportTo destinations with bounded adjustment; forty candidate positions in all directions through 20m.",
     "Cosmetic door hiding failure no longer discards a validated matched vehicle.",
     "Spawn error messages identify application/construction/validation/placement stages."
+  ],
+  "menu_truck_043_log_sha256": "1fce778348ce9973c8f6dbdd0744b0b2ba5462084b479bef3dd994539a187d20",
+  "menu_truck_043_observations": [
+    "Every F2 attempt fails the viewport-size guard before AddDebugText.",
+    "F5 fails at target selection, not possession; user clarifies only truck entry affected.",
+    "Many successful Abel spawns within seconds; screenshots show overlapping and roof-stacked cars.",
+    "Alternate models now spawn, but door hiding reports an opaque component-array failure.",
+    "User reports reversed A/D persists with the queued-setter correction."
+  ],
+  "changes_044": [
+    "Shared scalar output table fixes GetViewportSize SDK ABI.",
+    "Tracked entry radius25m.",
+    "Native A/D runtime mapping transaction replaces queued steering writes; CDO restored immediately and no save calls.",
+    "Planar footprint separation before and after native adjustment.",
+    "Pending action coalescing and F9 cooldown0.75s.",
+    "Owned component-list fallback; hidden door retains query-only interaction collision."
   ]
 }

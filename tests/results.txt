@@ -13,6 +13,7 @@ PASS: new vehicle keys are queued and failed diagnostics cannot drop active flig
 PASS: cold startup never registers engine-wide component or steering hooks
 PASS: native pre-damage guard suppresses protected-player damage before health processing
 PASS: F2 opens the native HUD menu without script drawing callbacks
+PASS: duplicate and rapid spawn shortcuts cannot flood the placement queue
 PASS: held hotkeys cannot repeatedly toggle god mode
 PASS: preserved old shortcuts migrate to the reserved F2 menu and F3 selection
 PASS: player custom health and lethal falling speed are guarded without resurrecting dead pawns
@@ -25,22 +26,29 @@ PASS: destroyed movement cleanup verifies the original pawn identity first
 PASS: non-finite engine data stops before unsafe movement
 PASS: packaged startup settings disable unsafe script hot reload
 PASS: god mode and post-flight landing guard preserve original damage permission
+PASS: native steering changes runtime axis mappings and immediately restores defaults
+PASS: native steering rolls back partial mapping and runtime rebuild failures
+PASS: native steering retains cleanup for failed restoration and refuses ambiguous input
 PASS: vehicle spawning uses real catalog classes, rejects blocked spawns and cleans failures
 PASS: vehicle boost starts off, supports normal driving and returns to off cleanly
 PASS: trainer driving validates entry, rolls back failure and restores on exit
-PASS: queued converted-car maintenance avoids global hooks and scopes keyboard steering
+PASS: converted-car maintenance enables native input correction only for its controlled car
+PASS: entry targets tracked cars throughout the spawn search radius without capturing distant traffic
 PASS: native vehicle adapter uses native spawn helper, health guard and reversible possession
 PASS: native text menu does not depend on a Blueprint canvas event
 PASS: native menu keyboard edges dispatch actions after restoring input
 PASS: native text failure and partial input capture never leave controls blocked
 PASS: native HUD queue uses flat reflected parameters and owns only its text entry
 PASS: stable-loader native spawn avoids FTransform marshaling and restores all temporary state
+PASS: vehicle footprints reject stacking before and after native destination adjustment
 PASS: selected bodies are constructed on Abel player Blueprint with matching animation and wheel rig
 PASS: incompatible source rigs are refused before template edits or native spawning
 PASS: authored source scale is installed before construction without late physics resizing
 PASS: converted models hide only the extra door components and keep them hidden after entry
+PASS: door hiding can enumerate owned components when native array marshaling fails
+PASS: component array decoding failures also use the owned-object fallback
 PASS: cosmetic door API failure does not discard a validated selected car
 PASS: partial template changes and failed construction always restore the native setup
 PASS: runtime source rigs can supply construction-only assets without sharing mutable paint
 PASS: vehicle model routing chooses the native player template and preserves explicit legacy mode
-RESULT: 318 assertions; 0 failures.
+RESULT: 358 assertions; 0 failures.

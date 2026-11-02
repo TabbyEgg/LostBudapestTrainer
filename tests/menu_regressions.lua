@@ -54,7 +54,7 @@ case('native HUD queue uses flat reflected parameters and owns only its text ent
     function pc:SetIgnoreMoveInput(v)self.move=self.move+(v and 1 or -1)end
     function pc:SetIgnoreLookInput(v)self.look=self.look+(v and 1 or -1)end
     function pc:IsInputKeyDown(key)return self.keys[key.KeyName:ToString()] or false end
-    function pc:GetViewportSize(x,y)x.SizeX=1280;y.SizeY=720 end
+    function pc:GetViewportSize(x,y)assert(x==y);x.SizeX=1280;x.SizeY=720 end
     function pc:DeprojectScreenPositionToWorld(x,y,origin,direction)
         assert(x==32 and y==40);origin.X=10;origin.Y=20;origin.Z=30;direction.X=1;direction.Y=0;direction.Z=0;return true
     end

@@ -1,6 +1,6 @@
 # Source and validation
 
-The trainer source is the eleven Lua files under
+The trainer source is the twelve Lua files under
 `Runtime/Mods/LostBudapestNoclip/Scripts/`. There is no compiled trainer logic.
 The only DLLs are unmodified files from official UE4SS 3.0.1, listed with hashes
 in `payload-manifest.json` and attributed in `THIRD-PARTY.md`.
@@ -25,7 +25,7 @@ Run `python tools/package.py` to verify the recorded source identities and
 dependency bytes, regenerate the payload manifest and create the release ZIP.
 The game EXE and research toolchains are excluded from releases.
 
-Current results: **318 Lua assertions and 61 installer assertions pass**.
+Current results: **358 Lua assertions and 61 installer assertions pass**.
 The actual runtime payload was also installed and removed in an isolated
 filesystem fixture, leaving the original game EXE unchanged. The loader proxy
 exports every DWM function imported by the supplied game EXE.
@@ -36,7 +36,7 @@ picker or Windows PowerShell 5.1 session was executed. The initial build needs
 an in-game check; the reported assertion counts do not establish that it works
 in the actual game.
 
-Version 0.4.3 uses a temporary native vehicle template profile during synchronous
+Version 0.4.4 uses a temporary native vehicle template profile during synchronous
 actor construction. Model mesh/animation/physics and wheel data are installed
 before physics initialization, then the exact original template is restored.
 Cases exercise one-based UE4SS arrays without resizing, incompatible rigs,
@@ -79,3 +79,24 @@ success; it also reports opaque Van 1 errors and strict placement rejection.
 This change has modeled native-boundary validation here, not a Windows engine
 run. Placement fixtures cover collision-adjusted TeleportTo destinations,
 player separation, refused destinations, staged failures and exact cleanup.
+
+0.4.4 fixes a concrete pinned-loader ABI mismatch: LuaUObject.cpp179-200 references
+scalar out tables without consuming each argument. GetViewportSize writes both
+SizeX and SizeY into the first table. Passing one table twice matches that
+behavior and a conforming implementation; the regression boundary now models
+both writes into the first table instead of assuming separate outputs.
+
+The new steering.lua changes paired A/D scales in InputSettings defaults only
+while ForceRebuildKeymaps copies them into runtime input, and restores the exact
+defaults immediately. It calls no SaveConfig, SaveKeyMappings or InvertAxis.
+Exit/menu/pause/disable/restart rebuild normal runtime mappings. Pending cleanup
+retains scheduling priority. ForceRebuildKeymaps refreshes all local PlayerInput
+objects, so unsaved runtime-specific input remaps may be replaced by project
+configuration; this demo workflow has one local player.
+
+The supplied 0.4.3 log shows the viewport guard failing, failed F5 target lookup,
+rapid repeated successful spawns and failed door component-array lookup. The
+truck entry selector now uses tracked references within25m. Footprint tests
+reject roof stacks even when native TeleportTo reports success; native bounds
+use struct output tables, with a conservative6mx3m fallback. Hotkey tests cover
+pending coalescing and cooldown reset. No Windows game is executed here.

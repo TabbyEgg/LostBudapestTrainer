@@ -56,45 +56,71 @@ case('trainer driving validates entry, rolls back failure and restores on exit',
     a.repairTarget=function()return nil end
     check(not v:repair(),'repair never touches an unowned distant vehicle')
 end)
-case('queued converted-car maintenance avoids global hooks and scopes keyboard steering',function()
-    local oldAdapter,oldEngine,oldProfile=package.loaded.adapter,package.loaded.vehicle_engine,package.loaded.player_vehicle
-    local oldName,oldEnum=FName,EFindName
+case('converted-car maintenance enables native input correction only for its controlled car',function()
+    local oldAdapter,oldEngine,oldProfile,oldSteering=package.loaded.adapter,package.loaded.vehicle_engine,package.loaded.player_vehicle,package.loaded.steering
     local config=require('config');local oldSetting=config.InvertVehicleSteering
-    local converted={IsValid=function()return true end,GetAddress=function()return 12 end,GetFullName=function()return 'ConvertedCar'end}
-    local other={IsValid=function()return true end,GetAddress=function()return 13 end,GetFullName=function()return 'OtherCar'end}
-    local movement={steer=0,writes=0,IsValid=function()return true end,GetAddress=function()return 14 end,GetFullName=function()return 'Movement'end}
-    function movement:SetSteeringInput(value)self.steer=value;self.writes=self.writes+1 end
-    local input,active,paused,ctxReads,doorTicks={},false,false,0,0
+    local converted={IsValid=function()return true end};local other={IsValid=function()return true end}
+    local movement={IsValid=function()return true end,SetSteeringInput=function()error('queued steering setters must not race native input')end}
+    local active,paused,ctxReads,doorTicks=false,false,0,0
     local pc={bShowMouseCursor=false,IsMoveInputIgnored=function()return false end,IsLookInputIgnored=function()return false end}
-    function pc:IsInputKeyDown(key)return input[key.KeyName:ToString()] or false end
-    local ctx={pawn=converted,controller=pc}
+    local ctx={pawn=converted,controller=pc};local core={active=false,updates={},resets=0}
+    function core:update(enabled)self.active=enabled;self.updates[#self.updates+1]=enabled;return true end
+    function core:reset()self.active=false;self.resets=self.resets+1;return true end
     local api={log=function()end,playerContext=function()ctxReads=ctxReads+1;return ctx end,gameplay=function()return{IsGamePaused=function()return paused end}end}
-    package.loaded.adapter=api
-    package.loaded.player_vehicle={hasWork=function()return active end,maintainDoors=function()doorTicks=doorTicks+1 end,convertedMovement=function(pawn)if pawn==converted then return movement end end}
-    package.loaded.vehicle_engine=nil;config.InvertVehicleSteering=nil
-    FName=function(name)return{ToString=function()return name end}end;EFindName={FNAME_Find=0}
+    local profiles={hasWork=function()return active end,maintainDoors=function()doorTicks=doorTicks+1 end,convertedMovement=function(pawn)if pawn==converted then return movement end end}
+    package.loaded.adapter=api;package.loaded.player_vehicle=profiles;package.loaded.steering={new=function()return core end};package.loaded.vehicle_engine=nil;config.InvertVehicleSteering=nil
     local ok,err=pcall(function()
-        local e=require('vehicle_engine')
-        e.tickConverted()
-        check(not e.hasConvertedWork() and ctxReads==0 and doorTicks==0,'no Unreal access or background maintenance before a converted car exists')
-        active=true;input.D=true;e.tickConverted()
-        check(movement.steer==-1 and doorTicks==1,'D is corrected inside queued work and doors are maintained without a native hook')
-        input.D=false;input.A=true;e.tickConverted()
-        check(movement.steer==1,'A uses the opposite corrected direction')
-        input.A=false;e.tickConverted();local writes=movement.writes;movement.steer=.4;e.tickConverted()
-        check(movement.writes==writes and movement.steer==.4,'keyboard release clears its correction once and leaves later analog inputs alone')
-        input.D=true;ctx.pawn=other;e.tickConverted()
-        check(movement.writes==writes,'original cars, NPCs and unconverted pawns receive no steering writes')
-        ctx.pawn=converted;api.menuOpen=true;e.tickConverted();api.menuOpen=false;paused=true;e.tickConverted();paused=false
-        check(movement.writes==writes,'pause and trainer menu suppress keyboard steering')
-        e.toggleSteering();e.tickConverted()
-        check(movement.writes==writes and not e.invertSteering,'menu toggle disables correction without registering or removing hooks')
-        e.toggleSteering();movement.SetSteeringInput=function()error('component changed')end;e.tickConverted()
-        check(e.maintenanceFailed and not e.hasConvertedWork(),'changed component stops only converted-car maintenance instead of breaking the core scheduler')
+        local e=require('vehicle_engine');e.tickConverted()
+        check(not e.hasConvertedWork() and ctxReads==0 and doorTicks==0,'no native input/door access before a converted car exists')
+        active=true;e.tickConverted()
+        check(core.active and doorTicks==1,'converted controlled car enables native mapping inversion without manual steering writes')
+        ctx.pawn=other;e.tickConverted();check(not core.active,'original cars and unconverted pawns restore normal input mappings')
+        ctx.pawn=converted;api.menuOpen=true;e.tickConverted();check(not core.active,'opening the menu restores normal mappings')
+        api.menuOpen=false;paused=true;e.tickConverted();check(not core.active,'pause restores normal mappings')
+        paused=false;e.tickConverted();e.toggleSteering();check(not core.active and not e.invertSteering,'menu toggle resets the native correction immediately')
+        e.toggleSteering();e.tickConverted();e.resetSteering();check(not core.active and core.resets>=2,'restart cleanup can restore native input explicitly')
+        profiles.maintainDoors=function()error('component changed')end;e.tickConverted()
+        check(e.maintenanceFailed and not core.active,'component failure stops maintenance and restores native input')
     end)
     config.InvertVehicleSteering=oldSetting
-    package.loaded.adapter,package.loaded.vehicle_engine,package.loaded.player_vehicle=oldAdapter,oldEngine,oldProfile
-    FName,EFindName=oldName,oldEnum
+    package.loaded.adapter,package.loaded.vehicle_engine,package.loaded.player_vehicle,package.loaded.steering=oldAdapter,oldEngine,oldProfile,oldSteering
+    if not ok then error(err)end
+end)
+case('entry targets tracked cars throughout the spawn search radius without capturing distant traffic',function()
+    local oldAdapter,oldEngine,oldFind=package.loaded.adapter,package.loaded.vehicle_engine,FindAllOf
+    local function actor(name,address,x,class)
+        local value={alive=true,x=x}
+        function value:IsValid()return self.alive end
+        function value:GetAddress()return address end
+        function value:GetFullName()return name end
+        function value:K2_GetActorLocation()return {X=self.x,Y=0,Z=0}end
+        function value:GetClass()return {GetFullName=function()return class end}end
+        return value
+    end
+    local native='BlueprintGeneratedClass /Game/Autok/Abel_Car.Abel_Car_C'
+    local traffic='BlueprintGeneratedClass /Game/Traffic_AI_System/Cars/Van/BP_Van_1.BP_Van_1_C'
+    local pawn=actor('WalkingPlayer',1,0,'Character')
+    local truck=actor('TrainerTruck',2,2400,native)
+    local stock=actor('OriginalCar',3,1300,native)
+    local passing=actor('UnrelatedTraffic',4,100,traffic)
+    local far=actor('FarTrainerCar',5,2700,native)
+    local global={}
+    package.loaded.adapter={log=function()end};package.loaded.vehicle_engine=nil
+    FindAllOf=function(kind)assert(kind=='WheeledVehicle');return global end
+    local ok,err=pcall(function()
+        local e=require('vehicle_engine');local ctx={pawn=pawn}
+        check(e.entryTarget(ctx,{truck})==truck,'tracked truck at 24 metres is enterable even when the global scan omits it')
+        global={stock,passing};check(e.entryTarget(ctx,{truck})==truck,'unowned original car beyond 12 metres and unrelated traffic are excluded')
+        stock.x=800;check(e.entryTarget(ctx,{truck})==stock,'a genuinely closer eligible original car wins over a distant trainer car')
+        global={};check(e.entryTarget(ctx,{far})==nil,'entry does not silently capture a trainer car beyond its 25 metre reach')
+        truck.alive=false;check(e.entryTarget(ctx,{truck})==nil,'destroyed tracked cars cannot be selected for entry')
+        truck.alive=true;truck.x=2500;check(e.entryTarget(ctx,{truck})==truck,'owned entry reach includes the edge beyond the 20 metre spawn search')
+        local api={log=function()end,player=function()return ctx end,entryTarget=function(c,owned)assert(c==ctx and owned[1]==truck);return truck end,
+            repairTarget=function()error('entry must use its own selector')end,captureDriver=function(c,target)assert(target==truck);return {}end,enterDriver=function()end}
+        local v=Vehicles.new(api);v.spawned={truck}
+        check(v:drive() and v.driver~=nil,'F5 uses the dedicated entry selector instead of the shorter repair selector')
+    end)
+    package.loaded.adapter,package.loaded.vehicle_engine,FindAllOf=oldAdapter,oldEngine,oldFind
     if not ok then error(err)end
 end)
 case('native vehicle adapter uses native spawn helper, health guard and reversible possession',function()

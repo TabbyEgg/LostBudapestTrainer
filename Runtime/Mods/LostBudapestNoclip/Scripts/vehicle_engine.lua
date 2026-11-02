@@ -1,6 +1,7 @@
 -- All calls are made by main.lua on the game thread. No guessed memory offsets.
 local adapter=require("adapter")
 local config=require("config")
+local nativeSteering=require("steering").new(adapter.log)
 local Engine={log=adapter.log,invertSteering=config.InvertVehicleSteering~=false}
 local function number(v)return type(v)=="number" and v==v and v~=math.huge and v~=-math.huge end
 local function vector(v)return v and number(v.X) and number(v.Y) and number(v.Z) end
@@ -20,12 +21,15 @@ function Engine.class(path)
 end
 function Engine.toggleSteering()
     Engine.invertSteering=not Engine.invertSteering
-    Engine.steeringHeld=nil
-    Engine.log(Engine.invertSteering and "Steering correction on." or "Steering correction off; original game steering restored.")
+    if Engine.invertSteering then Engine.log("Steering correction on.")
+    else
+        local restored=nativeSteering:reset()
+        Engine.log(restored and "Steering correction off; original game steering restored." or "Steering correction off; native input restoration pending.")
+    end
 end
 function Engine.hasConvertedWork()
     -- Pure Lua check: the asynchronous scheduler must not inspect Unreal objects.
-    return not Engine.maintenanceFailed and require("player_vehicle").hasWork()
+    return nativeSteering.active or nativeSteering.pending~=nil or nativeSteering.needsRebuild or (not Engine.maintenanceFailed and require("player_vehicle").hasWork())
 end
 function Engine.spawnTransform(ctx)
     local position=ctx.pawn:K2_GetActorLocation()
@@ -70,6 +74,30 @@ function Engine.finish(actor,transform)
 end
 function Engine.destroy(actor) actor:K2_DestroyActor() end
 local function id(actor) return tostring(actor:GetAddress())..":"..actor:GetFullName() end
+function Engine.entryTarget(ctx,spawned)
+    local origin=ctx.pawn:K2_GetActorLocation()
+    assert(vector(origin),"The player position is unavailable")
+    local closest,best=nil,math.huge
+    local seen={}
+    local function consider(actor,reach)
+        if not Engine.valid(actor) or actor:GetFullName():find("Default__",1,true) then return end
+        local key=id(actor)
+        if seen[key] then return end
+        seen[key]=true
+        local p=actor:K2_GetActorLocation()
+        if not vector(p) then return end
+        local distance=(p.X-origin.X)^2+(p.Y-origin.Y)^2+(p.Z-origin.Z)^2
+        if distance<=reach*reach and distance<best then closest,best=actor,distance end
+    end
+    -- These references are already the successful trainer spawns. Do not make
+    -- entry depend on finding those same instances a second time in a scan.
+    for _,actor in ipairs(spawned or {})do consider(actor,2500)end
+    -- Keep normal map-car interaction local and leave unrelated traffic alone.
+    for _,actor in ipairs(FindAllOf("WheeledVehicle") or {})do
+        if Engine.valid(actor) and actor:GetClass():GetFullName()=="BlueprintGeneratedClass /Game/Autok/Abel_Car.Abel_Car_C" then consider(actor,1200)end
+    end
+    return closest
+end
 function Engine.repairTarget(ctx,spawned)
     local own={}
     for _,actor in ipairs(spawned) do if Engine.valid(actor) then own[id(actor)]=true end end
@@ -141,32 +169,26 @@ function Engine.repair(actor)
     return "Vehicle recovered upright and motion stopped. This blueprint exposes no verified health repair; damage was not changed."
 end
 local function key(pc,name) return pc:IsInputKeyDown({KeyName=FName(name,EFindName.FNAME_Find)}) end
+function Engine.resetSteering()return nativeSteering:reset()end
 function Engine.tickConverted()
     if not Engine.hasConvertedWork() then return end
+    if nativeSteering.pending or nativeSteering.needsRebuild then
+        nativeSteering:reset()
+        return
+    end
+    local enable=false
     local ok,err=pcall(function()
+        if Engine.maintenanceFailed then return end
         local profiles=require("player_vehicle")
         profiles.maintainDoors(Engine.log)
-        if not Engine.invertSteering or adapter.menuOpen then Engine.steeringHeld=nil;return end
+        if not Engine.invertSteering or adapter.menuOpen then return end
         local ctx=Engine.player()
-        if not ctx then Engine.steeringHeld=nil;return end
-        local movement=profiles.convertedMovement(ctx.pawn)
-        if not Engine.valid(movement) then Engine.steeringHeld=nil;return end
-        local left,right=key(ctx.controller,"A"),key(ctx.controller,"D")
-        local target=id(ctx.pawn)..":"..id(movement)
-        if left or right then
-            movement:SetSteeringInput((left and 1 or 0)-(right and 1 or 0))
-            Engine.steeringHeld=target
-        else
-            -- Release only a keyboard correction we applied to this same car.
-            -- With no A/D held, leave gamepad and other native inputs alone.
-            if Engine.steeringHeld==target then movement:SetSteeringInput(0)end
-            Engine.steeringHeld=nil
-        end
+        enable=ctx~=nil and Engine.valid(profiles.convertedMovement(ctx.pawn))
     end)
-    if not ok then
-        Engine.maintenanceFailed=true;Engine.steeringHeld=nil
-        Engine.log("Converted car maintenance stopped: "..tostring(err))
-    end
+    if not ok then Engine.maintenanceFailed=true;Engine.log("Converted car maintenance stopped: "..tostring(err))end
+    -- Change the native input mapping used by Blueprint, rather than racing
+    -- Blueprint's steering setter with another write each queued update.
+    nativeSteering:update(enable)
 end
 function Engine.captureDriver(ctx,actor)
     assert(id(ctx.pawn)~=id(actor),"Already inside a vehicle; use its normal exit control")

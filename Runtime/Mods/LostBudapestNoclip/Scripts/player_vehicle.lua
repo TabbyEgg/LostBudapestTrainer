@@ -145,12 +145,33 @@ function Profile:hideExtraDoors(actor)
     for key,record in pairs(hiddenDoors)do
         if not valid(record.part) or not valid(record.actor) then hiddenDoors[key]=nil end
     end
-    local class=StaticFindObject('/Script/Engine.MeshComponent')
-    assert(valid(class),'Mesh component metadata is unavailable')
-    local parts=actor:GetComponentsByClass(class)
     local entries={}
-    if type(parts)=='table' then entries=parts
-    else for i=1,parts:GetArrayNum()do entries[i]=parts[i]end end
+    local readable,parts=pcall(function()
+        local class=StaticFindObject('/Script/Engine.MeshComponent')
+        assert(valid(class),'Mesh component metadata is unavailable')
+        local result=actor:GetComponentsByClass(class)
+        if type(result)=='table' and rawget(result,'GetArrayNum')==nil then return result end
+        local count=result:GetArrayNum()
+        assert(type(count)=='number' and count>=0 and count<=4096 and count%1==0,'Invalid component array')
+        local decoded={}
+        for i=1,count do decoded[i]=result[i]end
+        return decoded
+    end)
+    if readable then
+        entries=parts
+    else
+        -- The stable loader can fail marshaling the component-return array.
+        -- Its object-list helper returns stable UObject references instead.
+        local actorPath=(objectName(actor) or ''):match('^[^ ]+ (.+)$') or objectName(actor)
+        local seen={}
+        for _,kind in ipairs({'StaticMeshComponent','SkeletalMeshComponent'})do
+            for _,part in ipairs(FindAllOf(kind) or {})do
+                if valid(part) and (objectName(part) or ''):find(actorPath..'.',1,true) and not seen[part:GetAddress()] then
+                    seen[part:GetAddress()]=true;entries[#entries+1]=part
+                end
+            end
+        end
+    end
     self.hiddenDoorCount=0
     for _,entry in ipairs(entries)do
         local part=unwrap(entry)
@@ -163,10 +184,12 @@ function Profile:hideExtraDoors(actor)
                 end
             end
             if hide then
-                hiddenDoors[part:GetAddress()]={part=part,actor=actor,name=objectName(part),owner=objectName(actor)}
+                local oldCollision=part:GetCollisionEnabled()
+                local queryCollision=(oldCollision==1 or oldCollision==3) and 1 or 0
+                hiddenDoors[part:GetAddress()]={part=part,actor=actor,name=objectName(part),owner=objectName(actor),collision=queryCollision}
                 part:SetVisibility(false,true)
                 part:SetHiddenInGame(true,true)
-                part:SetCollisionEnabled(0)
+                part:SetCollisionEnabled(queryCollision)
                 self.hiddenDoorCount=self.hiddenDoorCount+1
             end
         end
@@ -184,7 +207,7 @@ function Profile.maintainDoors(log)
             end
             if part.bVisible~=false then part:SetVisibility(false,true)end
             if part.bHiddenInGame~=true then part:SetHiddenInGame(true,true)end
-            if part:GetCollisionEnabled()~=0 then part:SetCollisionEnabled(0)end
+            if part:GetCollisionEnabled()~=record.collision then part:SetCollisionEnabled(record.collision)end
         end)
         if not ok then hiddenDoors[key]=nil;if log then log('Door maintenance stopped for a changed component: '..tostring(err))end end
     end
