@@ -1,4 +1,4 @@
-# Lost Budapest Trainer 0.4.6
+# Lost Budapest Trainer 0.4.7
 
 [**Download the latest ZIP from Releases**](https://github.com/TabbyEgg/LostBudapestTrainer/releases/latest)
 
@@ -75,6 +75,7 @@ a hard speed limiter.
 | F3 | Cycle selected spawn model; selected name appears in UE4SS.log |
 | Home | Read vehicle diagnostics into UE4SS.log |
 | F4 | Toggle god mode |
+| F | Close-range entry/exit for spawned replacement cars |
 | F5 | Enter/exit trainer-driving mode |
 | F6 | Toggle noclip |
 | F7 / F8 | Lower / raise flight speed |
@@ -92,9 +93,11 @@ value and limits falling velocity to 3 m/s. It does not resurrect a pawn already
 killed by a scripted event or prove protection against every custom instant kill.
 F4 toggles manual protection; flight applies the guard automatically.
 
-Spawn selection: **Abel's car** (default), estate, hatchback, liftback, luxury,
-van 1 and van 2. Models must already be loaded in the current level.
-Only already-loaded blueprints are used. **There is no trainer spawn cap**; old
+Spawn selection starts with **Abel's car** (default), estate, hatchback, liftback,
+luxury, van 1 and van 2. Opening the menu or cycling models also discovers other
+supported car blueprints already loaded in the level, including **Coupe (small Fiat)**, sedan and
+SUV when their rigs are available. Your selected model stays selected when the
+list grows. **There is no trainer spawn cap**; old
 `MaxVehicles` settings are ignored. The menu shows the live spawned count. Repeated queued spawn requests are
 combined, with 0.75 seconds between F9 attempts.
 Spawning many vehicles still consumes game memory and physics resources. A spawn only counts after its actual position
@@ -107,13 +110,15 @@ area. Failed spawns report the model and reason in the menu message and log.
 
 ### Shared player vehicle setup
 
-**Player vehicle setup is on by default.** Estate, hatchback, liftback, luxury
-and van selections use Abel's player-vehicle Blueprint with the selected model's
+**Player vehicle setup is on by default.** Supported replacement models
+use Abel's player-vehicle Blueprint with the selected model's
 body, animation, physics asset and wheel rig. This gives compatible models the
 same player controls, speedometer, radio and camera setup as Abel's car.
 
 Converted models hide the separate original Ábel door and wheel meshes. Doors
 retain query collision for interaction; hidden cosmetic wheels have no collision.
+Wheel cleanup also recognizes generic accessories attached to original wheel
+sockets and secondary copies of the original body, including poseable meshes.
 The selected model's own wheel rig and the interior steering wheel are retained.
 The hatchback also hides the recognized driver's head bone to prevent it protruding
 through the roof, while keeping the body and hands. This is a cosmetic adjustment;
@@ -127,16 +132,19 @@ source colors. Body paint changes leave captured glass, trim and roof colors unc
 
 Component lookup can fall back
 to the SDK object list if the component-array call is unavailable. Doors that are part
-of the selected body stay with that body. **Keyboard steering fix** defaults on for
-these converted cars, including normal game entry with F. It updates the native A/D axis mappings used by the car, while leaving gamepad
+of the selected body stay with that body. **Keyboard steering correction is automatic**
+for these converted cars, including normal game entry with F. It updates the native A/D axis mappings used by the car, while leaving gamepad
 entries unchanged. Normal runtime mappings are restored when you exit, pause,
-open the trainer menu or disable the fix; no input settings are saved to disk. Toggle it in the menu,
-or set `InvertVehicleSteering = false` in `config.lua` to retain original inputs.
+or open the trainer menu; no input settings are saved to disk. There is no steering
+toggle in the menu. Old `InvertVehicleSteering` settings are ignored.
 
 This applies to new trainer spawns. Existing map traffic and the original Abel
 car are left alone. Stand on foot within **25 metres** and press **F5** to enter or
-exit a spawned car. F5 switches noclip off at your current location before entry.
-Use F5 if the game's F interaction prompt is unavailable on a replacement body.
+exit a spawned car. **F** also provides close-range entry: stand beside the body,
+face the car and press F. Successful normal game entry takes priority. Both entry
+shortcuts switch noclip off at your current location before trainer possession.
+F exits trainer-managed entry; the game's ordinary vehicle exit remains available
+for a car entered normally.
 
 A model must have a loaded animated body, matching wheel count, valid wheel
 bones and finite positive mesh scale. Authored scale is applied before vehicle
@@ -167,7 +175,8 @@ Speeds and bindings can be edited in
 Trainer messages are in `Eltunt_Budapest3\Binaries\Win64\UE4SS.log`.
 Home includes nearby vehicle repair/entry function names and relevant property
 names. Detailed diagnostics stay in the log; the HUD shows a short completion
-message. Send that log if repair or entry is unsupported.
+message. Mesh assets, attachment sockets, visibility and wheel-rig names are also
+recorded for nearby cars. Send that log if repair, entry or wheel cleanup is unsupported.
 
 All engine access is through reflected functions on the game thread. Game EXE
 and save files are not modified. Use a full game restart after changing scripts;

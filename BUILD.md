@@ -1,6 +1,6 @@
 # Source and validation
 
-The trainer source is the fourteen Lua files under
+The trainer source is the fifteen Lua files under
 `Runtime/Mods/LostBudapestNoclip/Scripts/`. There is no compiled trainer logic.
 The only DLLs are unmodified files from official UE4SS 3.0.1, listed with hashes
 in `payload-manifest.json` and attributed in `THIRD-PARTY.md`.
@@ -25,7 +25,7 @@ Run `python tools/package.py` to verify the recorded source identities and
 dependency bytes, regenerate the payload manifest and create the release ZIP.
 The game EXE and research toolchains are excluded from releases.
 
-Current results: **434 Lua assertions and 61 installer assertions pass**, recorded
+Current results: **525 Lua assertions and 61 installer assertions pass**, recorded
 in `tests/results.json` and `validation/installer-check-results.json`.
 The actual runtime payload was also installed and removed in an isolated
 filesystem fixture, leaving the original game EXE unchanged. The loader proxy
@@ -146,3 +146,38 @@ including after automatic retry exhaustion, and F5 can retry the retained
 snapshot. Native F interaction geometry remains model dependent. Diagnostic
 reflection output now stays in `UE4SS.log`; the HUD receives a single completion
 or failure summary, and failures restore the notice callback.
+
+0.4.7 extends owned cosmetic matching with the exact original native body asset
+and original wheel-attachment socket names captured before template changes.
+Generic secondary components can therefore qualify without wheel-like names,
+while the selected root mesh and its physics wheel rig remain excluded. The
+fallback scan includes skinned and poseable meshes. Wheel hiding no longer
+propagates to child components, and maintenance rejects changed assets or
+attachments. The user confirms the 0.4.6 hatchback head adjustment works; their
+remaining wheel-overlap screenshots do not identify which component renders the
+visible geometry. These additional identity paths are checked without claiming
+that the actual remaining geometry has been identified in the Windows game.
+
+A queued normal-F fallback considers only nearby tracked converted cars. A
+0.25-second game-time grace gives native input its normal frame first. Native
+entry takes priority if it changes the pawn or locks the walking character;
+the action remembers entry versus exit so a normal exit cannot turn into
+re-entry. Noclip state must restore successfully before vehicle capture, which
+also rejects unowned MOVE_None state and changed target/character identities.
+The grace uses game time and is cancelled by menu/restart or a backwards clock.
+The fallback uses the existing trainer possession path rather than guessing native
+interaction-box transforms or Blueprint entry-function parameters.
+
+The catalog discovers additional already-loaded concrete vehicle Blueprints,
+verifying vehicle ancestry and an animated body/wheel rig before adding them.
+Discovery performs no asset loads or module-startup world access, and merging
+preserves existing aliases and the selected model. Steering correction now runs
+automatically for converted cars, with no menu/config toggle; an older retained
+configuration's toggle value is ignored. Runtime mapping restoration still
+applies on exit, pause and menu activity.
+
+The supplied 0.4.5 log records additional Coupe, Sedan and SUV blueprints. It
+also maps BP_Coupe to `/Game/Autok/Fiat/Fiat_rigged.Fiat_rigged`; the selector
+labels this model `Coupe (small Fiat)` to distinguish it from Hatchback. The
+new user-provided cars.zip labels all seven original selections for reference;
+the pictures do not expose runtime component identities or native entry state.

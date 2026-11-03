@@ -2,7 +2,7 @@
 local adapter=require("adapter")
 local config=require("config")
 local nativeSteering=require("steering").new(adapter.log)
-local Engine={log=adapter.log,invertSteering=config.InvertVehicleSteering~=false}
+local Engine={log=adapter.log,invertSteering=true}
 local function number(v)return type(v)=="number" and v==v and v~=math.huge and v~=-math.huge end
 local function vector(v)return v and number(v.X) and number(v.Y) and number(v.Z) end
 local function rotation(v)return v and number(v.Pitch) and number(v.Yaw) and number(v.Roll) end
@@ -18,14 +18,6 @@ end
 function Engine.class(path)
     local class=StaticFindObject(path)
     if Engine.valid(class) then return class end
-end
-function Engine.toggleSteering()
-    Engine.invertSteering=not Engine.invertSteering
-    if Engine.invertSteering then Engine.log("Steering correction on.")
-    else
-        local restored=nativeSteering:reset()
-        Engine.log(restored and "Steering correction off; original game steering restored." or "Steering correction off; native input restoration pending.")
-    end
 end
 function Engine.hasConvertedWork()
     -- Pure Lua check: the asynchronous scheduler must not inspect Unreal objects.
@@ -76,13 +68,85 @@ function Engine.finish(actor,transform)
 end
 function Engine.destroy(actor) actor:K2_DestroyActor() end
 local function id(actor) return tostring(actor:GetAddress())..":"..actor:GetFullName() end
+function Engine.interactionContext()
+    -- A queued F callback can run after the game's own interaction has already
+    -- possessed a car. Read the optional character component inside pcall so
+    -- that successful native entry, loading and other pawns are left alone.
+    local ok,ctx=pcall(function()
+        local player=Engine.player()
+        if not player then return end
+        local movement=player.pawn.CharacterMovement
+        if not Engine.valid(movement) or player.pawn.bHidden==true then return end
+        local mode=movement.MovementMode
+        if not number(mode) or mode%1~=0 or mode<0 or mode>6 then return end
+        return {controller=player.controller,pawn=player.pawn,movement=movement}
+    end)
+    return ok and ctx or nil
+end
+local function interactionBounds(actor,position)
+    local function read(colliding)
+        local origin,extent={},{}
+        local ok=pcall(function()actor:GetActorBounds(colliding,origin,extent,false)end)
+        if not ok then origin,extent={},{};ok=pcall(function()actor:GetActorBounds(colliding,origin,extent)end)end
+        if not ok or not vector(origin) or not vector(extent) then return end
+        -- Reject corrupt/inflated bounds rather than turning F into a remote
+        -- possession shortcut. A normal car/truck is well within these limits.
+        if extent.X<10 or extent.X>1000 or extent.Y<10 or extent.Y>1000 or extent.Z<10 or extent.Z>500 then return end
+        if math.abs(origin.X-position.X)>1500 or math.abs(origin.Y-position.Y)>1500 or math.abs(origin.Z-position.Z)>1000 then return end
+        return origin,extent
+    end
+    local origin,extent=read(true)
+    if not origin then origin,extent=read(false)end
+    return origin,extent
+end
+function Engine.interactionTarget(ctx,spawned)
+    local origin=ctx.pawn:K2_GetActorLocation()
+    if not vector(origin) then return end
+    local facing=ctx.controller:GetControlRotation()
+    if not facing or not number(facing.Yaw) then return end
+    local yaw=math.rad(facing.Yaw%360)
+    local forwardX,forwardY=math.cos(yaw),math.sin(yaw)
+    local ownPawn=id(ctx.pawn)
+    local profile=require('player_vehicle')
+    local closest,best,bestCenter,bestName=nil,math.huge,math.huge,nil
+    local seen={}
+    for _,actor in ipairs(spawned or {})do
+        pcall(function()
+            if not Engine.valid(actor) or actor:GetFullName():find('Default__',1,true)
+                or actor:GetClass():GetFullName()~='BlueprintGeneratedClass /Game/Autok/Abel_Car.Abel_Car_C'
+                or not profile.steeringTarget(actor) then return end
+            local key=id(actor)
+            if key==ownPawn or seen[key]then return end
+            seen[key]=true
+            local position=actor:K2_GetActorLocation()
+            if not vector(position) then return end
+            local center,extent=interactionBounds(actor,position)
+            local bounded=center~=nil
+            center=center or position;extent=extent or {X=0,Y=0,Z=0}
+            local dx,dy,dz=center.X-origin.X,center.Y-origin.Y,center.Z-origin.Z
+            local x,y,z=math.max(0,math.abs(dx)-extent.X),math.max(0,math.abs(dy)-extent.Y),math.max(0,math.abs(dz)-extent.Z)
+            local planar=x*x+y*y
+            local reach=bounded and 180 or 350
+            if planar>reach*reach or z>150 then return end
+            local length=math.sqrt(dx*dx+dy*dy)
+            local inside=x==0 and y==0 and z==0
+            if not inside and length>.001 and (dx*forwardX+dy*forwardY)/length<.25 then return end
+            local distance=planar+z*z
+            local centerDistance=dx*dx+dy*dy+dz*dz
+            if distance<best or (distance==best and (centerDistance<bestCenter or (centerDistance==bestCenter and (not bestName or key<bestName))))then
+                closest,best,bestCenter,bestName=actor,distance,centerDistance,key
+            end
+        end)
+    end
+    return closest
+end
 function Engine.entryTarget(ctx,spawned)
     local origin=ctx.pawn:K2_GetActorLocation()
     assert(vector(origin),"The player position is unavailable")
     local closest,best=nil,math.huge
     local seen={}
     local function consider(actor,reach)
-        if not Engine.valid(actor) or actor:GetFullName():find("Default__",1,true) then return end
+        if not Engine.valid(actor) or actor:GetFullName():find("Default__",1,true) or id(actor)==id(ctx.pawn) then return end
         local key=id(actor)
         if seen[key] then return end
         seen[key]=true
@@ -376,28 +440,46 @@ function Engine.diagnose()
         end
     end
     table.sort(items,function(a,b)return a.distance<b.distance end)
-    local partsOk,skeletalParts=pcall(FindAllOf,'SkeletalMeshComponent')
+    local catalogOk,catalog=pcall(function()return require('catalog').discover()end)
+    if catalogOk then
+        for _,model in ipairs(catalog)do Engine.log('AVAILABLE MODEL '..model.name..' '..model.path)end
+    end
     for index=1,math.min(3,#items) do
         local actor=items[index].actor
         Engine.log("NEARBY VEHICLE "..actor:GetFullName())
         local bodyOk,body=pcall(function()return actor.Mesh.SkeletalMesh end)
         if bodyOk and Engine.valid(body) then Engine.log("BODY "..body:GetFullName())end
-        if partsOk then
-            local inspected=0
-            for _,part in ipairs(skeletalParts or {})do
-                if inspected>=12 then break end
+        local partsOk,parts=pcall(require('player_vehicle').ownedParts,actor)
+        if partsOk then for partIndex=1,math.min(32,#parts)do
+            local part=parts[partIndex]
+            pcall(function()
+                Engine.log('OWNED MESH '..part:GetFullName()..' ROOT='..tostring(id(part)==id(actor.Mesh)))
+                for _,field in ipairs({'StaticMesh','SkeletalMesh'})do
+                    pcall(function()local asset=part[field];if Engine.valid(asset)then Engine.log('  '..field..'='..asset:GetFullName())end end)
+                end
                 pcall(function()
-                    if not Engine.valid(part) or not Engine.valid(part:GetOwner()) or part:GetOwner():GetFullName()~=actor:GetFullName()then return end
-                    inspected=inspected+1
-                    Engine.log('OWNED SKELETAL MESH '..part:GetFullName())
+                    local parent=part:GetAttachParent()
+                    Engine.log('  ATTACH='..(Engine.valid(parent) and parent:GetFullName() or 'None')..' SOCKET='..part:GetAttachSocketName():ToString())
+                end)
+                Engine.log('  VISIBLE='..tostring(part.bVisible)..' HIDDEN='..tostring(part.bHiddenInGame)..' COLLISION='..tostring(part:GetCollisionEnabled()))
+                pcall(function()
                     local count=part:GetNumBones()
                     if type(count)~='number' or count%1~=0 or count<0 or count>1024 then return end
                     local bones={}
                     for bone=0,math.min(count,256)-1 do bones[#bones+1]=part:GetBoneName(bone):ToString()end
-                    Engine.log('BONES '..table.concat(bones,', '))
+                    Engine.log('  BONES '..table.concat(bones,', '))
                 end)
+            end)
+        end end
+        pcall(function()
+            local wheels=actor.VehicleMovement.WheelSetups
+            local count=wheels:GetArrayNum()
+            if type(count)~='number' or count%1~=0 or count<2 or count>8 then return end
+            for wheelIndex=1,count do
+                local wheel=wheels[wheelIndex]
+                Engine.log('WHEEL '..wheelIndex..' BONE='..wheel.BoneName:ToString()..' CLASS='..wheel.WheelClass:GetFullName())
             end
-        end
+        end)
         local class=actor:GetClass()
         for _=1,6 do
             if not Engine.valid(class) then break end

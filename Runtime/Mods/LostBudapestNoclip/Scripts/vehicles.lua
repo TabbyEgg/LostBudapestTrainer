@@ -10,7 +10,19 @@ Vehicles.catalog = {
     {name="Van 2",path="/Game/Traffic_AI_System/Cars/Van/BP_Van_2.BP_Van_2_C"},
 }
 function Vehicles.new(api)
-    return setmetatable({api=api,selected=1,spawned={},driver=nil,boostIndex=1,boostSpeeds={0,60,100,150,200,300}},Vehicles)
+    local catalog={}
+    for i,entry in ipairs(Vehicles.catalog)do catalog[i]={name=entry.name,path=entry.path}end
+    return setmetatable({api=api,catalog=catalog,selected=1,spawned={},driver=nil,boostIndex=1,boostSpeeds={0,60,100,150,200,300}},Vehicles)
+end
+function Vehicles:refreshCatalog()
+    local ok,catalog,selected=pcall(function()
+        local discovery=require('catalog')
+        local current=self.catalog[self.selected]
+        return discovery.merge(self.catalog,discovery.discover(),current and current.path)
+    end)
+    if not ok then return false end
+    self.catalog,self.selected=catalog,selected
+    return true
 end
 
 function Vehicles:count()
@@ -24,29 +36,51 @@ function Vehicles:boost(direction)
     local speed=self.boostSpeeds[self.boostIndex]
     self.api.log(speed==0 and "Vehicle boost off." or ("Vehicle boost target: "..speed.." km/h. Hold Shift + W while driving."))
 end
-function Vehicles:drive()
-    if self.driver then
-        local ok,result=pcall(self.api.exitDriver,self.driver)
-        if ok and result~=false then self.driver=nil;self.driverFailed=false;self.api.log("Trainer driving off; returned to your character.");return true end
-        self.api.log("Could not leave trainer driving safely; try F5 again.");return false
-    end
+local function startDriving(self,interaction)
     local state
+    local stage,targetName='find walking player','unknown vehicle'
     local ok,err=pcall(function()
-        local ctx=assert(self.api.player(),"Enter a level on foot first")
-        local target=assert((self.api.entryTarget or self.api.repairTarget)(ctx,self.spawned),"Stand within 25 metres of a trainer car (12 metres for Abel's original car)")
+        local ctx
+        if interaction then ctx=self.api.interactionContext() else ctx=self.api.player()end
+        if interaction and not ctx then return end -- Native F already entered, or controls are unavailable.
+        assert(ctx,"Enter a level on foot first")
+        stage='select nearby vehicle'
+        local target
+        if interaction then
+            target=self.api.interactionTarget(ctx,self.spawned)
+            if not target then return end -- Leave normal game interactions alone.
+        else target=assert((self.api.entryTarget or self.api.repairTarget)(ctx,self.spawned),"Stand within 25 metres of a trainer car (12 metres for Abel's original car)")end
+        local named,value=pcall(function()return target:GetFullName()end)
+        if named and type(value)=='string' then targetName=value end
+        self.api.log('Entering '..targetName..(interaction and ' through nearby F fallback.' or ' through F5.'))
+        stage='capture character state'
         state=self.api.captureDriver(ctx,target)
+        state.interactionFallback=interaction==true
+        stage='possess selected vehicle'
         self.api.enterDriver(state)
         self.driver=state;self.driverFailed=false
-        self.api.log(state.native and "Abel car native controls and camera active. F5 exits." or "Trainer driving on. W forward; S reverse; A/D steer; Space brake; F5 exit.")
+        self.api.log(state.native and (interaction and "Native car controls active. F or F5 exits." or "Abel car native controls and camera active. F5 exits.") or "Trainer driving on. W forward; S reverse; A/D steer; Space brake; F5 exit.")
     end)
     if not ok then
         if state then
             local restored,result=pcall(self.api.exitDriver,state)
             if not restored or result==false then self.driver=state end
         end
-        self.api.log("Could not start trainer driving: "..tostring(err));return false
+        self.api.log("Could not start trainer driving at "..stage.." for "..targetName..": "..tostring(err));return false
     end
-    return true
+    return self.driver~=nil
+end
+function Vehicles:drive()
+    if self.driver then
+        local ok,result=pcall(self.api.exitDriver,self.driver)
+        if ok and result~=false then self.driver=nil;self.driverFailed=false;self.api.log("Trainer driving off; returned to your character.");return true end
+        self.api.log("Could not leave trainer driving safely; try F5 again.");return false
+    end
+    return startDriving(self,false)
+end
+function Vehicles:interact()
+    if self.driver then return self:drive()end
+    return startDriving(self,true)
 end
 function Vehicles:tick()
     if not self.driver then

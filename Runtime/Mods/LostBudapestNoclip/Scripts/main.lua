@@ -6,6 +6,8 @@ local protection = require("protection").new(adapter)
 local vehicleEngine=require("vehicle_engine")
 local vehicles=require("vehicles").new(vehicleEngine)
 local actions, queued = {}, false
+local interactReady=false
+local pendingInteraction
 local heldKeys={}
 local usedKeys={}
 local lastActionTimes={}
@@ -30,6 +32,34 @@ local function actionReady(action,key)
     return true
 end
 
+local function interactionIdentity(ctx,target)
+    local function identity(object)return tostring(object:GetAddress())..':'..object:GetFullName()end
+    return identity(ctx.controller)..'|'..identity(ctx.pawn)..'|'..identity(target)
+end
+local function finiteTime(value)return type(value)=='number' and value==value and value~=math.huge and value~=-math.huge end
+local function interactionContext()
+    local ctx=vehicleEngine.interactionContext()
+    -- MovementMode None without our noclip snapshot can belong to a native
+    -- entry animation or another scripted interaction. Never capture that lock.
+    if ctx and ctx.movement and ctx.movement.MovementMode==0 and not controller:isEnabled() and not controller.snapshot then return nil end
+    return ctx
+end
+local function finishInteraction()
+    local pending=pendingInteraction
+    if not pending then return end
+    local ctx=not adapter.menuOpen and interactionContext()
+    local target=ctx and vehicleEngine.interactionTarget(ctx,vehicles.spawned)
+    if not target or interactionIdentity(ctx,target)~=pending.identity then pendingInteraction=nil;return end
+    local now=adapter.time(ctx)
+    if not finiteTime(now) or now<pending.started then pendingInteraction=nil;return end
+    if now<pending.due then return end
+    pendingInteraction=nil
+    local restored=true
+    if controller:isEnabled() or controller.snapshot then restored=controller:disable(false)end
+    if restored then vehicles:interact()
+    else adapter.log('Vehicle entry paused until player movement is restored. Press F5 to retry.')end
+end
+
 local function bind(name,action,fallback)
     if name==false then return end
     local function available(value)
@@ -44,12 +74,22 @@ local function bind(name,action,fallback)
     if not key then adapter.log("Shortcut unavailable for "..action.."; it remains available in the menu.");return end
     usedKeys[key]=action
     local unrealName=({INS="Insert",HOME="Home"})[label] or label
-    RegisterKeyBind(key,function()request(action,unrealName)end)
+    RegisterKeyBind(key,function()
+        if action=='interact' then
+            -- The cached walking flag is updated only on the game thread.
+            -- Remember the requested direction before native F may possess or
+            -- leave a car, so an exit can never become a queued re-entry.
+            if adapter.menuOpen then return end
+            if vehicles.driver then request('interactExit',unrealName)
+            elseif interactReady then request('interactEnter',unrealName)end
+        else request(action,unrealName)end
+    end)
 end
 
 -- Reserve these first, including with preserved pre-0.4.1 configurations.
 bind("F2","menu")
 bind("F3","cycleVehicle")
+bind("F","interact")
 local extraMenu=config.MenuKey
 if type(extraMenu)=="string" and extraMenu:upper()~="F2" and extraMenu:upper()~="INS" and extraMenu:upper()~="INSERT" then
     bind(extraMenu,"menu")
@@ -71,12 +111,12 @@ if type(extraCycle)=="string" and extraCycle:upper()~="F2" and extraCycle:upper(
 
 local menu=require("menu").new(require("menu_engine"),function()
     return {flying=controller:isEnabled(),god=protection.manual,protected=protection.landing or protection.flight,
-        speed=config.Speeds[controller.speedIndex],model=vehicles.catalog[vehicles.selected].name,driving=vehicles.driver~=nil,spawned=vehicles:count(),boost=vehicles.boostSpeeds[vehicles.boostIndex],steering=vehicleEngine.invertSteering}
+        speed=config.Speeds[controller.speedIndex],model=vehicles.catalog[vehicles.selected].name,driving=vehicles.driver~=nil,spawned=vehicles:count(),boost=vehicles.boostSpeeds[vehicles.boostIndex]}
 end,request)
 adapter.onLog=function(message)menu:notice(message)end
 
 LoopAsync(16, function()
-    if not queued and (#actions > 0 or controller:hasWork() or protection:hasWork() or vehicles:hasWork() or menu:hasWork() or vehicleEngine.hasConvertedWork() or next(heldKeys)~=nil) then
+    if not queued and (#actions > 0 or pendingInteraction~=nil or controller:hasWork() or protection:hasWork() or vehicles:hasWork() or menu:hasWork() or vehicleEngine.hasConvertedWork() or next(heldKeys)~=nil) then
         queued = true
         local ok, err = pcall(ExecuteInGameThread, function()
             -- Drop the pending flag even if a callback fails. Only one queued
@@ -92,7 +132,9 @@ LoopAsync(16, function()
                     local key=type(item)=="table" and item.key or nil
                     if (not key or not heldKeys[key]) and actionReady(action,key) then
                     if key then heldKeys[key]=true end
+                    if action~='interactEnter' then pendingInteraction=nil end
                     if action=="toggle" or action=="return" or action=="drive" or action=="repair" or action=="spawnVehicle" or action=="diagnose" then menu:close() end
+                    if (action=='menu' or action=='cycleVehicle' or action=='previousVehicle') and vehicles.refreshCatalog then vehicles:refreshCatalog()end
                     if action=="menu" then menu:toggle()
                     elseif action == "diagnose" then
                         -- Detailed reflection output belongs in the log. Keep
@@ -116,26 +158,45 @@ LoopAsync(16, function()
                         if controller:isEnabled() or controller.snapshot then restored=controller:disable(false) end
                         if restored then vehicles:drive()
                         else adapter.log("Vehicle entry paused until player movement is restored. Press F5 to retry.") end
+                    elseif action=='interactEnter' then
+                        -- Normal game entry takes priority. If native F already
+                        -- changed the pawn, the queued fallback does nothing.
+                        local ctx=interactionContext()
+                        local target=ctx and vehicleEngine.interactionTarget(ctx,vehicles.spawned)
+                        if target then
+                            local now=adapter.time(ctx)
+                            if finiteTime(now) then
+                                -- Give native F its normal input frame before
+                                -- fallback possession. Revalidate the same
+                                -- character and target throughout the grace.
+                                pendingInteraction={identity=interactionIdentity(ctx,target),started=now,due=now+.25}
+                            end
+                        end
+                    elseif action=='interactExit' then
+                        if vehicles.driver then vehicles:interact()end
                     elseif action == "repair" then vehicles:repair()
                     elseif action == "cycleVehicle" then vehicles:cycle()
                     elseif action == "previousVehicle" then vehicles:cycle(-1)
                     elseif action == "boostFaster" then vehicles:boost(1)
                     elseif action == "boostSlower" then vehicles:boost(-1)
-                    elseif action == "steering" then vehicleEngine.toggleSteering()
                     elseif action == "spawnVehicle" then vehicles:spawn()
                     elseif action == "godmode" then protection:toggle()
                     elseif action == "return" then controller:disable(true)
                     else controller[action](controller) end
                     end
                 end
+                finishInteraction()
                 menu:tick()
                 controller:tick()
                 protection:tick(controller:isEnabled())
                 vehicles:tick()
                 vehicleEngine.tickConverted()
+                interactReady=not adapter.menuOpen and vehicleEngine.hasConvertedWork() and interactionContext()~=nil
             end)
             queued = false
             if not callbackOk then
+                interactReady=false
+                pendingInteraction=nil
                 menu:close()
                 controller:disable(false)
                 adapter.log("Trainer callback stopped: " .. tostring(callbackError))
@@ -166,6 +227,8 @@ if type(RegisterHook) == "function" then
     -- optional LoadMapPre callback has an upstream argument-count defect.
     local ok, err = pcall(RegisterHook, "/Script/Engine.PlayerController:ClientRestart", function()
         actions = {}
+        interactReady=false
+        pendingInteraction=nil
         vehicleEngine.resetSteering()
         heldKeys={}
         lastActionTimes={}
@@ -180,4 +243,4 @@ if type(RegisterHook) == "function" then
     if not ok then adapter.log("Player restart hook unavailable; pawn-change cleanup remains active: " .. tostring(err)) end
 end
 
-adapter.log("Ready. F2 menu; F3 next vehicle; Home diagnostics; F1 repair/recover; F4 god; F5 enter/exit; F6 noclip; F7/F8 speed; F9 spawn; F10 return.")
+adapter.log("Ready. F2 menu; F3 next vehicle; Home diagnostics; F1 repair/recover; F4 god; F nearby car; F5 enter/exit; F6 noclip; F7/F8 speed; F9 spawn; F10 return.")

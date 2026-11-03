@@ -3,7 +3,6 @@ return {
     DefaultSpeedIndex = 2,
     BoostMultiplier = 3,
     MaxDeltaSeconds = 0.05,
-    InvertVehicleSteering = true, -- correct reversed A/D on converted model bodies
     PlayerVehicleSetup = true, -- selected bodies use Abel's player vehicle setup
     VehicleKeys = {Repair="F1", Next="F3", Diagnose="HOME", God="F4", Drive="F5", Spawn="F9"},
     MenuKey = "F2",

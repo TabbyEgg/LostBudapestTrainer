@@ -1,9 +1,9 @@
-## 0.4.6 — vehicle cosmetics and easier entry
+## 0.4.7 — more models, F entry and automatic steering
 
-- Hide the extra original Ábel wheel meshes on replacement vehicles while retaining the selected model's wheel rig and interior steering wheel.
-- Vary supported body paint per spawn using private materials and loaded traffic schemes. Unrecognized paint parameters retain their source colors.
-- Hide the recognized hatchback driver's head bone so it cannot protrude through the roof; the body and hands remain visible. Unknown skeletons are left unchanged.
-- F5 restores walking movement at your current location before entering, including when noclip is on. Use F5 beside a spawned car if the game's F prompt is unavailable.
-- Keep detailed diagnostic property/function lines in UE4SS.log and show one result message on screen.
+- Discover supported loaded models when opening the menu or cycling cars. This includes **Coupe (small Fiat)**, Sedan and SUV when their rigs are available, while keeping the selected model stable as the list grows.
+- Add close-range **F** entry for trainer-spawned replacement cars, including Van 2 and Luxury. Face the nearby car and press F. Successful normal game entry takes priority; F or F5 exits trainer-managed driving.
+- Apply keyboard steering correction automatically. Remove its menu switch and ignore old steering-toggle configuration.
+- Extend leftover-wheel cleanup to generic accessories identified by native wheel sockets or the original body asset, including poseable meshes. Keep the selected body and its physical wheel rig intact.
+- Add nearby mesh assets, attachment sockets, visibility and wheel-rig names to Home diagnostics for identifying any remaining overlap.
 
-Fully quit the game and run **Update.cmd**. Spawn a new vehicle to use the updated cosmetics. **F2** opens the menu, **F3** cycles models, **F9** spawns and **F5** enters/exits a nearby trainer car.
+Fully quit the game and run **Update.cmd**. Spawn a new vehicle to use the updated cleanup. **F2** opens the menu, **F3** cycles models, **F9** spawns and **F5** remains available for entry/exit within 25 metres.

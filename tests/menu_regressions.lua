@@ -35,7 +35,14 @@ case('native menu keyboard edges dispatch actions after restoring input',functio
     f.menu:toggle();f.tick();f.tick({down=true});f.tick();f.tick({down=true});f.tick();f.tick({right=true});f.tick({right=true})
     check(#f.requests==2 and f.requests[2].action=='faster' and f.menu.open,'speed adjustment stays open and held arrows do not repeat')
     f.tick();f.tick({back=true});check(not f.menu.open and f.unlocks==2,'Backspace closes without leaking either input lock')
-    local rows=f.menu:rows();check(rows[8].value:find('0 spawned',1,true) and rows[12].value=='F2 / Backspace','spawn count and close shortcut stay visible')
+    local spawn,close,steering
+    for _,row in ipairs(f.menu:rows())do
+        if row.action=='spawnVehicle' then spawn=row end
+        if row.action=='close' then close=row end
+        if row.action=='steering' or row.label=='Keyboard steering fix' then steering=row end
+    end
+    check(spawn and spawn.value:find('0 spawned',1,true) and close and close.value=='F2 / Backspace','spawn count and close shortcut stay visible')
+    check(not steering,'automatic keyboard steering correction has no menu option')
 end)
 case('native text failure and partial input capture never leave controls blocked',function()
     local f=fixture();f.menu:toggle();f.failPresent=true;f.tick()

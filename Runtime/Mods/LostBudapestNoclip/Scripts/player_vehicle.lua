@@ -95,6 +95,13 @@ function Profile.new(sourceClass,playerClass)
     assert(#sourceWheels==#playerWheels,'This model has an incompatible player wheel count')
     local materialCount,materials=selected.materialCount,selected.materials
     local self=setmetatable({body=body,animation=animation,physics=mesh.PhysicsAssetOverride,scale=selected.scale,wheels=sourceWheels,materials=materials,paint=selected.paint,materialCount=materialCount,changes={}},Profile)
+    -- Keep original visual identities before the temporary template changes.
+    -- Construction can retain generic-named native accessories on these bones.
+    self.nativeBody=target.SkeletalMesh
+    self.nativeWheelNames={}
+    for _,wheel in ipairs(playerWheels)do
+        if wheel.name~='None' then self.nativeWheelNames[wheel.name:lower()]=true end
+    end
     self.hideDriverHead=sourceClass:GetFullName():find('/Cars/Hatch/',1,true)~=nil
     local function change(object,key,value)
         self.changes[#self.changes+1]={object=object,key=key,old=object[key],value=value}
@@ -149,26 +156,66 @@ local function wheelName(name)
     for _,word in ipairs({'wheel','tire','tyre','hubcap','kerek','kerék','felni','gumi','abroncs'})do if name:find(word,1,true)then return true end end
     return name:match('^rim') or name:match('[^%a]rim')
 end
-local function cosmeticKind(part)
+local function humanoid(part)
+    local ok,result=pcall(function()
+        local count=part:GetNumBones()
+        if type(count)~='number' or count<1 or count>1024 or count%1~=0 then return false end
+        local head,hand,torso=false,false,false
+        for i=0,count-1 do
+            local name=part:GetBoneName(i):ToString():lower():gsub('[^%w]','')
+            head=head or name=='head' or name=='mixamorighead'
+            hand=hand or name=='handl' or name=='handr' or name=='lefthand' or name=='righthand' or name=='mixamoriglefthand' or name=='mixamorigrighthand'
+            torso=torso or name=='pelvis' or name=='hips' or name=='spine01' or name=='spine' or name=='mixamorighips' or name=='mixamorigspine'
+        end
+        return head and (hand or torso)
+    end)
+    return ok and result
+end
+local function cosmeticKind(profile,actor,part)
     local names={partName(part)}
+    local assets={}
     for _,field in ipairs({'StaticMesh','SkeletalMesh'})do
         local ok,asset=pcall(function()return part[field]end)
-        if ok and valid(asset)then names[#names+1]=partName(asset)end
+        if ok and valid(asset)then
+            names[#names+1]=partName(asset)
+            assets[#assets+1]={field=field,name=objectName(asset)}
+        end
     end
     -- An interior steering wheel can use a generic wheel asset. Check all
     -- names for this exclusion before classifying any separate mesh as a tyre.
     for _,name in ipairs(names)do if steeringName(name)then return nil end end
     for _,name in ipairs(names)do if doorName(name)then return 'door' end end
+    -- Driver components may also have Wheel in their component/asset names.
+    -- Exclude people before every wheel matching path, not just socket matches.
+    for _,name in ipairs(names)do
+        if name:find('driver',1,true) or name:find('passenger',1,true) or name:find('character',1,true)then return nil end
+    end
+    if humanoid(part)then return nil end
     for _,name in ipairs(names)do if wheelName(name)then return 'wheel' end end
+    -- Exact native asset/socket identities identify pieces with names such as
+    -- StaticMeshComponent0 without relying on their generated names.
+    if #assets==0 then return nil end
+    local guard
+    local nativeName=objectName(profile.nativeBody)
+    if nativeName and nativeName~=objectName(profile.body)then
+        for _,asset in ipairs(assets)do
+            if asset.field=='SkeletalMesh' and asset.name==nativeName then guard={assetField=asset.field,assetName=asset.name};break end
+        end
+    end
+    if not guard then
+        local ok,parent,socket=pcall(function()return part:GetAttachParent(),part:GetAttachSocketName():ToString()end)
+        if ok and valid(parent) and objectName(parent)==objectName(actor.Mesh) and parent:GetAddress()==actor.Mesh:GetAddress()
+            and type(socket)=='string' and profile.nativeWheelNames[socket:lower()]then
+            guard={assetField=assets[1].field,assetName=assets[1].name,parentName=objectName(parent),parentAddress=parent:GetAddress(),socket=socket:lower()}
+        end
+    end
+    if guard then return 'wheel',guard end
 end
 local function unwrap(value)
     local ok,result=pcall(function()return value:get()end)
     return ok and result or value
 end
-function Profile:hideExtraDoors(actor)
-    for key,record in pairs(hiddenDoors)do
-        if not valid(record.part) or not valid(record.actor) then hiddenDoors[key]=nil end
-    end
+function Profile.ownedParts(actor)
     local entries={}
     local readable,parts=pcall(function()
         local class=StaticFindObject('/Script/Engine.MeshComponent')
@@ -188,14 +235,35 @@ function Profile:hideExtraDoors(actor)
         -- Its object-list helper returns stable UObject references instead.
         local actorPath=(objectName(actor) or ''):match('^[^ ]+ (.+)$') or objectName(actor)
         local seen={}
-        for _,kind in ipairs({'StaticMeshComponent','SkeletalMeshComponent'})do
-            for _,part in ipairs(FindAllOf(kind) or {})do
+        local enumerated=false
+        for _,kind in ipairs({'StaticMeshComponent','SkinnedMeshComponent','SkeletalMeshComponent','PoseableMeshComponent'})do
+            local ok,objects=pcall(FindAllOf,kind)
+            if ok then enumerated=true end
+            for _,part in ipairs(ok and objects or {})do
                 if valid(part) and (objectName(part) or ''):find(actorPath..'.',1,true) and not seen[part:GetAddress()] then
                     seen[part:GetAddress()]=true;entries[#entries+1]=part
                 end
             end
         end
+        assert(enumerated,'Owned mesh component enumeration is unavailable')
     end
+    local owned={}
+    for _,entry in ipairs(entries)do
+        -- A stale component wrapper must not prevent processing the remaining
+        -- valid owned meshes from the same native component array.
+        local ok,part=pcall(function()
+            local part=unwrap(entry)
+            if valid(part) and objectName(part:GetOwner())==objectName(actor)then return part end
+        end)
+        if ok and part then owned[#owned+1]=part end
+    end
+    return owned
+end
+function Profile:hideExtraDoors(actor)
+    for key,record in pairs(hiddenDoors)do
+        if not valid(record.part) or not valid(record.actor) then hiddenDoors[key]=nil end
+    end
+    local entries=Profile.ownedParts(actor)
     self.hiddenDoorCount,self.hiddenWheelCount,self.hiddenHeadCount=0,0,0
     for _,entry in ipairs(entries)do
         local part=unwrap(entry)
@@ -204,13 +272,14 @@ function Profile:hideExtraDoors(actor)
                 local hidden=Driver.hideHead(actor,part)
                 if hidden then self.hiddenHeadCount=self.hiddenHeadCount+1 end
             end
-            local kind=cosmeticKind(part)
+            local kind,guard=cosmeticKind(self,actor,part)
             if kind then
                 local oldCollision=part:GetCollisionEnabled()
                 local queryCollision=kind=='door' and (oldCollision==1 or oldCollision==3) and 1 or 0
-                hiddenDoors[part:GetAddress()]={part=part,actor=actor,name=objectName(part),owner=objectName(actor),collision=queryCollision}
-                part:SetVisibility(false,true)
-                part:SetHiddenInGame(true,true)
+                local propagate=kind=='door'
+                hiddenDoors[part:GetAddress()]={part=part,actor=actor,name=objectName(part),owner=objectName(actor),collision=queryCollision,propagate=propagate,guard=guard}
+                part:SetVisibility(false,propagate)
+                part:SetHiddenInGame(true,propagate)
                 part:SetCollisionEnabled(queryCollision)
                 if kind=='door' then self.hiddenDoorCount=self.hiddenDoorCount+1
                 else self.hiddenWheelCount=self.hiddenWheelCount+1 end
@@ -229,8 +298,17 @@ function Profile.maintainDoors(log)
             if not valid(record.actor) or not valid(part) or objectName(record.actor)~=record.owner or objectName(part)~=record.name or objectName(part:GetOwner())~=record.owner then
                 hiddenDoors[key]=nil;return
             end
-            if part.bVisible~=false then part:SetVisibility(false,true)end
-            if part.bHiddenInGame~=true then part:SetHiddenInGame(true,true)end
+            local guard=record.guard
+            if guard then
+                if objectName(part[guard.assetField])~=guard.assetName then hiddenDoors[key]=nil;return end
+                if guard.parentName then
+                    local parent=part:GetAttachParent()
+                    if not valid(parent) or objectName(parent)~=guard.parentName or parent:GetAddress()~=guard.parentAddress
+                        or part:GetAttachSocketName():ToString():lower()~=guard.socket then hiddenDoors[key]=nil;return end
+                end
+            end
+            if part.bVisible~=false then part:SetVisibility(false,record.propagate)end
+            if part.bHiddenInGame~=true then part:SetHiddenInGame(true,record.propagate)end
             if part:GetCollisionEnabled()~=record.collision then part:SetCollisionEnabled(record.collision)end
         end)
         if not ok then hiddenDoors[key]=nil;if log then log('Cosmetic component maintenance stopped for a changed component: '..tostring(err))end end

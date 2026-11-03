@@ -293,7 +293,7 @@ local function engine()
     function f.statics:IsGamePaused(context)guard('IsGamePaused');assert(context==f.pawn,'pause requires world context');return f.paused or false end
     function f.load()
         package.loaded.adapter=nil;package.loaded.vehicle_engine=nil;package.loaded.menu_engine=nil
-        Key={HOME=36,INS=45,F1=112,F2=113,F3=114,F4=115,F5=116,F6=117,F7=118,F8=119,F9=120,F10=121};EFindName={FNAME_Find=0}
+        Key={F=70,HOME=36,INS=45,F1=112,F2=113,F3=114,F4=115,F5=116,F6=117,F7=118,F8=119,F9=120,F10=121};EFindName={FNAME_Find=0}
         FindAllOf=function(name)guard('FindAllOf');if name=='HUD' then return f.huds or {}end;if name=='GameEngine' then return {f.fontEngine}end;assert(name=='PlayerController');return f.controllers or {f.pc} end
         StaticFindObject=function(path)guard('StaticFindObject');assert(path=='/Script/Engine.Default__GameplayStatics');return f.statics end
         FName=function(name,mode)
@@ -374,6 +374,142 @@ case('F5 restores normal walking before vehicle capture without returning to fli
         f.finish()
     end
     package.loaded.vehicles=previous
+end)
+
+local function interactionFixture(fn)
+    local previous=package.loaded.vehicles
+    local f=engine();f.onFoot=true;f.nearCar=true;f.targetAddress=0x7000
+    f.target={}
+    function f.target:GetAddress()assert(f.inGame,'target identity must be read on the game thread');return f.targetAddress end
+    function f.target:GetFullName()assert(f.inGame,'target identity must be read on the game thread');return 'Abel_Car_C /World.SpawnedCar'end
+    local driving={catalog={{name='Test',path='/Game/Test'}},selected=1,boostSpeeds={0},boostIndex=1,
+        count=function()return 1 end,hasWork=function()return false end,tick=function()end,refreshCatalog=function()end}
+    function driving:interact()
+        assert(f.inGame,'F interaction must execute on the game thread')
+        if self.driver then
+            f.exitCalls=(f.exitCalls or 0)+1;self.driver=nil;f.onFoot=true
+        else
+            f.enterCalls=(f.enterCalls or 0)+1
+            f.capturedNormal=f.collision and f.movement.MovementMode==1
+            self.driver={interactionFallback=true};f.onFoot=false
+        end
+    end
+    package.loaded.vehicles={new=function()return driving end}
+    f.load()
+    local e=require('vehicle_engine')
+    local original={}
+    for _,name in ipairs({'interactionContext','interactionTarget','hasConvertedWork','tickConverted','resetSteering'})do original[name]=e[name]end
+    e.interactionContext=function()
+        assert(f.inGame,'walking-context reads must execute on the game thread')
+        return f.onFoot and {controller=f.pc,pawn=f.pawn,movement=f.movement} or nil
+    end
+    e.interactionTarget=function()
+        assert(f.inGame,'close-car target reads must execute on the game thread')
+        return f.nearCar and f.target or nil
+    end
+    e.hasConvertedWork=function()return true end
+    e.tickConverted=function()end
+    e.resetSteering=function()return true end
+    local ok,err=pcall(fn,f,driving,e)
+    for name,value in pairs(original)do e[name]=value end
+    -- A missing original API must also be restored after an isolated run.
+    if original.interactionContext==nil then e.interactionContext=nil end
+    if original.interactionTarget==nil then e.interactionTarget=nil end
+    package.loaded.vehicles=previous;f.finish()
+    if not ok then error(err)end
+end
+
+case('F fallback queues only close-car entry and managed exit without engine reads in callbacks',function()
+    interactionFixture(function(f,driving)
+        check(type(f.registry[Key.F])=='function','the game F key has a trainer fallback binding')
+        f.press('F');f.step(0)
+        check(not f.enterCalls,'F before the first cached walking update cannot trigger fallback entry')
+        local before=#f.events
+        f.press('F')
+        check(#f.events==before and not f.enterCalls,'F key callback uses cached Lua state without touching Unreal or entering immediately')
+        f.step(.01)
+        check(not f.enterCalls,'the first queued update gives native F its input grace instead of possessing immediately')
+        f.step(.20)
+        check(not f.enterCalls,'fallback entry waits for the full quarter second of game time')
+        f.step(.06)
+        check(f.enterCalls==1 and f.capturedNormal and driving.driver~=nil,'after native grace the queued fallback captures normal walking state and owns its entry')
+        f.press('F');f.step(.01)
+        check(f.exitCalls==1 and driving.driver==nil,'F exits a trainer-managed entry instead of attempting another possession')
+    end)
+end)
+
+case('F fallback does not reverse successful native entry or immediately reenter after native exit',function()
+    interactionFixture(function(f)
+        f.step(0);f.press('F');f.step(.01)
+        check(not f.enterCalls,'native input grace starts before fallback possession')
+        f.onFoot=false -- the native F action succeeds during the grace window
+        f.step(.26)
+        check(not f.enterCalls and not f.exitCalls,'native F entry during the grace window cancels fallback ownership')
+        f.press('F') -- previous queued state says the player was driving
+        f.onFoot=true -- native F now exits before the next queued update
+        f.step(.01)
+        f.step(.26)
+        check(not f.enterCalls,'normal native exit cannot queue a fallback reentry from a stale walking state')
+    end)
+end)
+
+case('F fallback restores noclip before entry and refuses a failed restoration',function()
+    interactionFixture(function(f,driving)
+        f.press('F6');f.step(0)
+        check(not f.collision and f.movement.MovementMode==0,'flight is active before the F restoration scenario')
+        f.failMovementRestore=true;f.press('F');f.step(.01);f.step(.26)
+        check(not f.enterCalls and driving.driver==nil,'failed restoration cannot enter a car or capture noclip movement')
+        f.failMovementRestore=false;f.press('F');f.step(.01);f.step(.26)
+        check(f.enterCalls==1 and f.capturedNormal,'a later F attempt captures restored walking collision and movement')
+    end)
+end)
+
+case('F beside unrelated interactions leaves noclip active when no trainer car qualifies',function()
+    interactionFixture(function(f)
+        f.press('F6');f.step(0)
+        f.nearCar=false;f.press('F');f.step(.01);f.step(.26)
+        check(not f.enterCalls and not f.collision and f.movement.MovementMode==0,'F away from a supported car neither captures a vehicle nor disables flight')
+    end)
+end)
+
+case('F fallback is suppressed in the menu and cached entry is discarded on player restart',function()
+    interactionFixture(function(f)
+        f.step(0)
+        require('adapter').menuOpen=true;f.press('F');f.step(.01)
+        check(not f.enterCalls,'menu input cannot trigger close-car fallback entry')
+        require('adapter').menuOpen=false;f.step(.01);f.press('F');f.step(.01)
+        f.inGame=true;f.restart();f.inGame=false
+        f.step(.26)
+        check(not f.enterCalls,'player restart drops an already pending native-input grace request')
+    end)
+end)
+
+case('F input grace never transfers a pending entry to another target or player identity',function()
+    for _,changed in ipairs({'target','pawn'})do
+        interactionFixture(function(f)
+            f.step(0);f.press('F');f.step(.01)
+            if changed=='target' then f.targetAddress=0x7010 else f.pawnAddress=0x1010 end
+            f.step(.26)
+            check(not f.enterCalls,'a changed '..changed..' identity cancels pending entry instead of possessing a replacement')
+            f.targetAddress=0x7000;f.pawnAddress=nil;f.step(.26)
+            check(not f.enterCalls,'the cancelled '..changed..' request cannot revive after its original identity returns')
+        end)
+    end
+end)
+
+case('F input grace uses monotonic game time and cannot capture externally disabled movement',function()
+    interactionFixture(function(f)
+        f.step(0);f.press('F');f.step(.01)
+        f.step(0);f.step(0)
+        check(not f.enterCalls,'queued refreshes without elapsed game time cannot expire native input grace')
+        f.step(-.5);f.step(1)
+        check(not f.enterCalls,'a backwards game clock cancels a pending entry rather than reviving it later')
+    end)
+    interactionFixture(function(f)
+        f.movement.MovementMode=0
+        f.step(0);f.press('F');f.step(.01);f.step(.26)
+        check(not f.enterCalls,'movement disabled by the game cannot be captured as an owned noclip entry')
+    end)
 end)
 
 case('bulk diagnostics are logged without forwarding property lines to HUD notices',function()
@@ -632,5 +768,6 @@ dofile(TRAINER_ROOT..'/tests/spawn_regressions.lua')(check,case)
 dofile(TRAINER_ROOT..'/tests/player_vehicle_regressions.lua')(check,case)
 dofile(TRAINER_ROOT..'/tests/paint_regressions.lua')(check,case)
 dofile(TRAINER_ROOT..'/tests/driver_regressions.lua')(check,case)
+dofile(TRAINER_ROOT..'/tests/catalog_regressions.lua')(check,case)
 
 TEST_PRINT(string.format('RESULT: %d assertions; %d failures.',TEST_ASSERTIONS,TEST_FAILURES))

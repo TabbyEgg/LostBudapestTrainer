@@ -68,17 +68,18 @@ case('converted-car maintenance enables native input correction only for its con
     function core:reset()self.active=false;self.resets=self.resets+1;return true end
     local api={log=function()end,playerContext=function()ctxReads=ctxReads+1;return ctx end,gameplay=function()return{IsGamePaused=function()return paused end}end}
     local profiles={hasWork=function()return active end,maintainDoors=function()doorTicks=doorTicks+1 end,convertedMovement=function(pawn)if pawn==converted then return movement end end}
-    package.loaded.adapter=api;package.loaded.player_vehicle=profiles;package.loaded.steering={new=function()return core end};package.loaded.vehicle_engine=nil;config.InvertVehicleSteering=nil
+    package.loaded.adapter=api;package.loaded.player_vehicle=profiles;package.loaded.steering={new=function()return core end};package.loaded.vehicle_engine=nil;config.InvertVehicleSteering=false
     local ok,err=pcall(function()
         local e=require('vehicle_engine');e.tickConverted()
+        check(e.invertSteering and e.toggleSteering==nil,'keyboard correction is automatic even when an old config disabled the removed option')
         check(not e.hasConvertedWork() and ctxReads==0 and doorTicks==0,'no native input/door access before a converted car exists')
         active=true;e.tickConverted()
         check(core.active and doorTicks==1,'converted controlled car enables native mapping inversion without manual steering writes')
         ctx.pawn=other;e.tickConverted();check(not core.active,'original cars and unconverted pawns restore normal input mappings')
         ctx.pawn=converted;api.menuOpen=true;e.tickConverted();check(not core.active,'opening the menu restores normal mappings')
         api.menuOpen=false;paused=true;e.tickConverted();check(not core.active,'pause restores normal mappings')
-        paused=false;e.tickConverted();e.toggleSteering();check(not core.active and not e.invertSteering,'menu toggle resets the native correction immediately')
-        e.toggleSteering();e.tickConverted();e.resetSteering();check(not core.active and core.resets>=2,'restart cleanup can restore native input explicitly')
+        paused=false;e.tickConverted();check(core.active,'closing pause restores automatic correction for the controlled converted car')
+        e.resetSteering();check(not core.active and core.resets>=1,'restart cleanup can restore native input explicitly')
         profiles.maintainDoors=function()error('component changed')end;e.tickConverted()
         check(e.maintenanceFailed and not core.active,'component failure stops maintenance and restores native input')
     end)
@@ -121,6 +122,114 @@ case('entry targets tracked cars throughout the spawn search radius without capt
         check(v:drive() and v.driver~=nil,'F5 uses the dedicated entry selector instead of the shorter repair selector')
     end)
     package.loaded.adapter,package.loaded.vehicle_engine,FindAllOf=oldAdapter,oldEngine,oldFind
+    if not ok then error(err)end
+end)
+case('nearby F fallback uses body bounds and facing only for tracked converted cars',function()
+    local oldAdapter,oldEngine,oldProfile,oldFind=package.loaded.adapter,package.loaded.vehicle_engine,package.loaded.player_vehicle,FindAllOf
+    local native='BlueprintGeneratedClass /Game/Autok/Abel_Car.Abel_Car_C'
+    local function actor(name,address,x,y,z)
+        local a={alive=true,converted=true,x=x or 0,y=y or 0,z=z or 0}
+        function a:IsValid()return self.alive end
+        function a:GetAddress()return address end
+        function a:GetFullName()return name end
+        function a:GetClass()return {GetFullName=function()return self.class or native end}end
+        function a:K2_GetActorLocation()return {X=self.x,Y=self.y,Z=self.z}end
+        function a:GetActorBounds(colliding,origin,extent,...)
+            assert(type(colliding)=='boolean')
+            if self.threeArgs then assert(select('#',...)==0)else assert(select('#',...)==1 and (...)==false)end
+            if not self.extent then error('bounds metadata unavailable')end
+            origin.X,origin.Y,origin.Z=self.x,self.y,self.z
+            extent.X,extent.Y,extent.Z=self.extent.X,self.extent.Y,self.extent.Z
+        end
+        return a
+    end
+    local pawn=actor('Character /World.Player',1,0,0,90);pawn.converted=false
+    pawn.CharacterMovement={IsValid=function()return true end,MovementMode=1}
+    local heading,paused,ignored=0,false,false
+    local pc={bShowMouseCursor=false,GetControlRotation=function()return {Yaw=heading}end,
+        IsMoveInputIgnored=function()return ignored end,IsLookInputIgnored=function()return false end}
+    local ctx={pawn=pawn,controller=pc}
+    local luxury=actor('Abel_Car_C /World.Luxury',2,600,0,90);luxury.extent={X=450,Y=130,Z=130}
+    local van=actor('Abel_Car_C /World.Van2',3,400,0,90);van.extent={X=250,Y=130,Z=130};van.threeArgs=true
+    package.loaded.adapter={log=function()end,playerContext=function()return ctx end,gameplay=function()return {IsGamePaused=function()return paused end}end}
+    package.loaded.player_vehicle={steeringTarget=function(a)return a.converted end};package.loaded.vehicle_engine=nil
+    FindAllOf=function()error('F fallback must not scan unowned map cars')end
+    local ok,err=pcall(function()
+        local e=require('vehicle_engine')
+        check(e.interactionContext().pawn==pawn,'walking characters provide a close-interaction context')
+        check(e.interactionTarget(ctx,{luxury})==luxury,'large Luxury body is enterable beside its door even when actor center is six metres away')
+        check(e.interactionTarget(ctx,{van})==van,'Van 2 supports the three-argument bounds ABI without changing any geometry')
+        luxury.x=631;check(e.interactionTarget(ctx,{luxury})==nil,'F reach stops beyond 180 centimetres from the body')
+        luxury.x=600;luxury.z=371;check(e.interactionTarget(ctx,{luxury})==nil,'F refuses cars more than 150 centimetres above their bounds')
+        luxury.z=90;heading=180;check(e.interactionTarget(ctx,{luxury})==nil,'cars behind the player cannot steal the F interaction')
+        luxury.x=20;check(e.interactionTarget(ctx,{luxury})==luxury,'a player already within the body bounds can enter while looking away')
+        heading=0;luxury.x=600
+        local unowned=actor('Abel_Car_C /World.Unowned',4,200);unowned.converted=false
+        local default=actor('Abel_Car_C /World.Default__Abel',5,100)
+        local dead=actor('Abel_Car_C /World.Dead',6,100);dead.alive=false
+        local traffic=actor('Traffic /World.Car',7,100);traffic.class='BlueprintGeneratedClass /Game/Traffic_AI_System/Cars/Van/BP_Van_2.BP_Van_2_C'
+        check(e.interactionTarget(ctx,{unowned,default,dead,traffic,pawn})==nil,'unowned traffic, defaults, destroyed cars and the controlled pawn are excluded')
+        local fallback=actor('Abel_Car_C /World.Fallback',8,350,0,90)
+        check(e.interactionTarget(ctx,{fallback})==fallback,'unavailable bounds allow a bounded 350 centimetre center fallback')
+        fallback.x=351;check(e.interactionTarget(ctx,{fallback})==nil,'missing bounds cannot turn F into the 25 metre F5 shortcut')
+        fallback.extent={X=50000,Y=50000,Z=50000};fallback.x=5000
+        check(e.interactionTarget(ctx,{fallback})==nil,'oversized bounds cannot expand F entry to distant cars')
+        heading=0/0;check(e.interactionTarget(ctx,{van})==nil,'invalid camera rotation cannot choose an interaction target');heading=0
+        van.extent={X=200,Y=100,Z=100}
+        check(e.interactionTarget(ctx,{luxury,van})==luxury,'the closest body surface wins instead of the closest actor origin')
+        paused=true;check(e.interactionContext()==nil,'paused gameplay cannot start fallback possession');paused=false
+        ignored=true;check(e.interactionContext()==nil,'scripted input locks prevent fallback entry');ignored=false
+        local original=pawn.CharacterMovement
+        pawn.CharacterMovement=nil
+        check(e.interactionContext()==nil,'a pawn without CharacterMovement cannot be captured after native F entry')
+        setmetatable(pawn,{__index=function(_,key)if key=='CharacterMovement'then error('opaque missing native property')end end})
+        check(e.interactionContext()==nil,'missing native character properties are safely contained')
+        setmetatable(pawn,nil);pawn.CharacterMovement=original
+        FindAllOf=function(kind)assert(kind=='WheeledVehicle');return {}end
+        check(e.entryTarget(ctx,{pawn,van})==van,'F5 never selects the currently controlled pawn itself')
+    end)
+    package.loaded.adapter,package.loaded.vehicle_engine,package.loaded.player_vehicle,FindAllOf=oldAdapter,oldEngine,oldProfile,oldFind
+    if not ok then error(err)end
+end)
+case('F fallback shares possession rollback and leaves completed native interactions alone',function()
+    local ctx,car={}, {GetFullName=function()return 'Abel_Car_C /World.Luxury'end}
+    local walking=true;local captured,selected,exited=0,0,0;local logs={}
+    local api={log=function(message)logs[#logs+1]=message end,player=function()error('F fallback must validate walking context first')end,
+        interactionContext=function()if walking then return ctx end end,
+        interactionTarget=function(c,owned)assert(c==ctx and owned[1]==car);selected=selected+1;return car end,
+        captureDriver=function(c,target)assert(c==ctx and target==car);captured=captured+1;return {native=true}end,
+        enterDriver=function()end,exitDriver=function()exited=exited+1;return true end}
+    local v=Vehicles.new(api);v.spawned={car}
+    check(v:interact() and v.driver.interactionFallback and captured==1,'nearby F entry records a managed fallback session')
+    check(v:interact() and v.driver==nil and exited==1,'F can leave a managed fallback session through the ordinary cleanup path')
+    local count=#logs;walking=false
+    check(not v:interact() and captured==1 and selected==1 and #logs==count,'completed native F entry is silently ignored without retargeting or capture')
+    walking=true;api.interactionTarget=function()return nil end
+    check(not v:interact() and captured==1 and #logs==count,'F used away from a converted car retains the normal game action without notices')
+    api.interactionTarget=function()return car end;api.enterDriver=function()error('possession refused')end
+    check(not v:interact() and v.driver==nil and exited==2,'failed nearby F possession restores the same character state as F5')
+    check(logs[#logs]:find('possess selected vehicle',1,true) and logs[#logs]:find('/World.Luxury',1,true),'entry failure names the exact target and failed stage')
+    local a,b=Vehicles.new(api),Vehicles.new(api);a.catalog[1].name='Edited'
+    check(b.catalog[1].name=="Abel's car" and Vehicles.catalog[1].name=="Abel's car",'discovered catalogs belong to each trainer instance rather than mutating shared defaults')
+end)
+case('vehicle catalog refresh preserves the selected path and survives discovery failure',function()
+    local previous=package.loaded.catalog
+    local v=Vehicles.new({log=function()end});v.selected=5
+    local selectedPath=v.catalog[v.selected].path
+    local discoveryCalls=0
+    package.loaded.catalog={discover=function()discoveryCalls=discoveryCalls+1;return {{name='Coupe',path='/Game/Traffic_AI_System/Cars/Coupe/BP_Coupe.BP_Coupe_C'}}end,
+        merge=function(existing,discovered,selected)
+            assert(selected==selectedPath and #existing==7 and discovered[1].name=='Coupe')
+            local result={};for i,entry in ipairs(existing)do result[i]=entry end;result[8]=discovered[1]
+            return result,5
+        end}
+    local ok,err=pcall(function()
+        check(v:refreshCatalog() and #v.catalog==8 and discoveryCalls==1,'explicit refresh merges discovered models into the instance catalog')
+        check(v.catalog[v.selected].path==selectedPath,'discovery does not change the player-selected model')
+        local before=v.catalog;package.loaded.catalog.discover=function()error('loading world')end
+        check(not v:refreshCatalog() and v.catalog==before and v.catalog[v.selected].path==selectedPath,'failed discovery retains the entire prior catalog and selection')
+    end)
+    package.loaded.catalog=previous
     if not ok then error(err)end
 end)
 case('native vehicle adapter uses native spawn helper, health guard and reversible possession',function()

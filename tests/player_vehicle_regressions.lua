@@ -95,27 +95,59 @@ local function fixture()
             a.door=door;a.driver=driver
             a.components={a.Mesh,{get=function()return door end},{get=function()return driver end}}
         end
-        if f.extraWheels then
+        if f.extraWheels or f.identityWheels then
             local function part(name,asset,owner)
                 local value=object('StaticMeshComponent /World.NewCar.'..name)
                 value.bVisible=true;value.bHiddenInGame=false;value.collision=3;value.writes=0
                 value.StaticMesh=asset and object('StaticMesh /Game/Abel.'..asset) or nil
                 function value:GetOwner()return owner or a end
-                function value:SetVisibility(v,propagate)assert(propagate);self.bVisible=v;self.writes=self.writes+1 end
-                function value:SetHiddenInGame(v,propagate)assert(propagate);self.bHiddenInGame=v;self.writes=self.writes+1 end
+                function value:SetVisibility(v,propagate)assert(type(propagate)=='boolean');self.bVisible=v;self.propagate=propagate;self.writes=self.writes+1 end
+                function value:SetHiddenInGame(v,propagate)assert(type(propagate)=='boolean');self.bHiddenInGame=v;self.propagate=propagate;self.writes=self.writes+1 end
                 function value:SetCollisionEnabled(v)self.collision=v;self.writes=self.writes+1 end
                 function value:GetCollisionEnabled()return self.collision end
+                function value:GetAttachParent()return self.parent end
+                function value:GetAttachSocketName()return fname(self.socket or 'None')end
                 a.components[#a.components+1]={get=function()return value end}
                 return value
             end
-            a.extraWheel=part('WheelFrontLeft','Wheel')
-            a.extraTire=part('AxleDetail','Tyre')
-            a.steeringWheel=part('SteeringWheel','Wheel')
-            a.dashboardWheel=part('DashboardPart','SteeringWheel')
-            a.trim=part('ChromeTrim','Trim')
-            a.foreignWheel=part('ForeignWheel','Wheel',f.pawn)
+            if f.extraWheels then
+                a.extraWheel=part('WheelFrontLeft','Wheel')
+                a.extraTire=part('AxleDetail','Tyre')
+                a.steeringWheel=part('SteeringWheel','Wheel')
+                a.dashboardWheel=part('DashboardPart','SteeringWheel')
+                a.trim=part('ChromeTrim','Trim')
+                a.foreignWheel=part('ForeignWheel','Wheel',f.pawn)
+                a.wheelDriver=part('DriverWheel','Wheel')
+                a.humanoidWheel=part('SkeletalWheel','SpokedWheel')
+                a.humanoidWheel.StaticMesh=nil;a.humanoidWheel.SkeletalMesh=object('SkeletalMesh /Game/People.Person')
+                function a.humanoidWheel:GetNumBones()return 5 end
+                function a.humanoidWheel:GetBoneName(i)return fname(({'head','pelvis','spine_01','hand_l','hand_r'})[i+1])end
+            end
+            if f.identityWheels then
+                a.genericWheel=part('StaticMeshComponent0','Piece0');a.genericWheel.parent=a.Mesh;a.genericWheel.socket='AbelWheel1'
+                a.otherSocket=part('StaticMeshComponent1','Piece1');a.otherSocket.parent=a.Mesh;a.otherSocket.socket='DoorSocket'
+                a.selectedAccessory=part('StaticMeshComponent2','Piece2');a.selectedAccessory.parent=a.Mesh;a.selectedAccessory.socket='HatchWheel1'
+                a.foreignAccessory=part('StaticMeshComponent3','Piece3',f.pawn);a.foreignAccessory.parent=a.Mesh;a.foreignAccessory.socket='AbelWheel2'
+                a.steeringAccessory=part('StaticMeshComponent4','SteeringWheel');a.steeringAccessory.parent=a.Mesh;a.steeringAccessory.socket='AbelWheel2'
+                a.humanoidAccessory=part('SkeletalMeshComponent0','Piece4');a.humanoidAccessory.parent=a.Mesh;a.humanoidAccessory.socket='AbelWheel3'
+                a.humanoidAccessory.StaticMesh=nil;a.humanoidAccessory.SkeletalMesh=object('SkeletalMesh /Game/People.Person')
+                function a.humanoidAccessory:GetNumBones()return 5 end
+                function a.humanoidAccessory:GetBoneName(i)return fname(({'head','pelvis','spine_01','hand_l','hand_r'})[i+1])end
+                a.oldBody=part('SkeletalMeshComponent1');a.oldBody.StaticMesh=nil;a.oldBody.SkeletalMesh=f.nativeBody
+                a.oldBody.name='SkeletalMeshComponent /World.NewCar.GenericNativeGeometry'
+                a.otherParent=part('StaticMeshComponent5','Piece5');a.otherParent.parent=a.oldBody;a.otherParent.socket='AbelWheel1'
+                a.poseableBody=part('PoseableMeshComponent0');a.poseableBody.StaticMesh=nil;a.poseableBody.SkeletalMesh=f.nativeBody
+                a.poseableBody.name='PoseableMeshComponent /World.NewCar.GenericPoseableGeometry'
+                a.foreignBody=part('SkeletalMeshComponent2',nil,f.pawn);a.foreignBody.SkeletalMesh=f.nativeBody
+            end
             a.Mesh.name='SkeletalMeshComponent /World.NewCar.SelectedWheelBody'
             function a.Mesh:SetVisibility()error('selected body must stay visible')end
+        end
+        if f.badOwnedPart then
+            a.badPart=object('StaticMeshComponent /World.NewCar.UnavailableComponent')
+            function a.badPart:GetOwner()error('component owner is unavailable')end
+            function a.badPart:SetVisibility()error('unavailable component must not be changed')end
+            table.insert(a.components,1,a.badPart)
         end
         a.VehicleMovement=object('NewPlayerMovement')
         local entries={}
@@ -151,12 +183,13 @@ local function fixture()
     f.oldFind,f.oldStatic,f.oldConstruct=FindAllOf,StaticFindObject,StaticConstructObject
     FindAllOf=function(kind)
         if kind=='WheeledVehicle' then return f.actors end
-        assert(kind=='StaticMeshComponent' or kind=='SkeletalMeshComponent')
+        assert(kind=='StaticMeshComponent' or kind=='SkeletalMeshComponent' or kind=='SkinnedMeshComponent' or kind=='PoseableMeshComponent')
         if f.failDoors then error('component enumeration unavailable')end
         local result={}
         for _,actor in ipairs(f.actors)do for _,entry in ipairs(actor.components or {})do
             local part=entry.get and entry:get() or entry
-            result[#result+1]=part
+            local className=part:GetFullName():match('^([^ ]+)')
+            if not f.strictComponentKinds or className==kind or (kind=='SkinnedMeshComponent' and (className=='SkeletalMeshComponent' or className=='PoseableMeshComponent'))then result[#result+1]=part end
         end end
         return result
     end
@@ -266,6 +299,8 @@ case('converted bodies hide separate Abel wheels while preserving the selected r
         check(profile.hiddenWheelCount==2 and not actor.extraWheel.bVisible and actor.extraWheel.bHiddenInGame and actor.extraWheel.collision==0,'separate native wheel components are hidden without collision')
         check(not actor.extraTire.bVisible and actor.extraTire.bHiddenInGame and actor.extraTire.collision==0,'a generic component is recognized by its tire mesh asset')
         check(actor.steeringWheel.bVisible and actor.dashboardWheel.bVisible and actor.steeringWheel.writes==0 and actor.dashboardWheel.writes==0,'interior steering wheels are excluded using both component and asset names')
+        check(actor.wheelDriver.bVisible and actor.wheelDriver.writes==0,'a driver component is preserved even when both its component and asset names contain Wheel')
+        check(actor.humanoidWheel.bVisible and actor.humanoidWheel.writes==0,'a wheel-named humanoid mesh preserves its visible body and hands')
         check(actor.trim.bVisible and actor.trim.writes==0 and actor.foreignWheel.writes==0,'trim and components owned by another actor are untouched')
         local setups=actor.VehicleMovement.WheelSetups
         check(actor.Mesh.SkeletalMesh==f.selectedBody and setups[1].WheelClass==f.selectedWheel and setups[1].BoneName:ToString()=='HatchWheel1' and setups[1].AdditionalOffset.Y==42,'selected root mesh and simulated wheel rig remain intact')
@@ -287,6 +322,59 @@ case('owned wheel hiding survives component-array marshaling failures',function(
         local profile=Profile.new(f.sourceClass,f.playerClass);local actor=f.spawn(profile)
         check(profile.hiddenWheelCount==2 and not profile.doorWarning and not actor.extraWheel.bVisible and not actor.extraTire.bVisible,'stable object enumeration hides separate wheels when native component-array return fails')
         check(actor.steeringWheel.bVisible and actor.dashboardWheel.bVisible and actor.foreignWheel.writes==0,'fallback keeps the same interior and ownership restrictions')
+    end)
+end)
+case('an unreadable component owner cannot block remaining valid wheel cosmetics',function()
+    for _,fallback in ipairs({false,true})do
+        runFixture(function(f)
+            f.badOwnedPart=true;f.extraWheels=true;f.failComponentQuery=fallback
+            local profile=Profile.new(f.sourceClass,f.playerClass);local actor=f.spawn(profile)
+            check(profile.hiddenWheelCount==2 and not profile.doorWarning and not actor.extraWheel.bVisible,'one unreadable owner is skipped while valid owned wheels are still hidden')
+            local found=false;for _,part in ipairs(Profile.ownedParts(actor))do if part==actor.badPart then found=true end end
+            check(not found and actor.wheelDriver.bVisible and actor.humanoidWheel.bVisible,'unreadable owner is omitted without changing driver or humanoid meshes')
+        end)
+    end
+end)
+case('generic native accessories use exact original body or wheel attachment identities',function()
+    runFixture(function(f)
+        f.identityWheels=true
+        local profile=Profile.new(f.sourceClass,f.playerClass)
+        check(profile.nativeBody==f.nativeBody and profile.nativeWheelNames.abelwheel1 and not profile.nativeWheelNames.hatchwheel1,'original native visual identities are captured before template mutation')
+        local actor=f.spawn(profile)
+        check(profile.hiddenWheelCount==3 and not actor.genericWheel.bVisible and actor.genericWheel.collision==0,'generic accessory attached to an original wheel bone is hidden')
+        check(not actor.oldBody.bVisible and not actor.poseableBody.bVisible,'secondary copies of the exact old native body asset are hidden even with generic component names')
+        check(actor.genericWheel.propagate==false and actor.oldBody.propagate==false,'wheel and duplicate-body hiding does not propagate into attached driver or other child meshes')
+        check(actor.otherSocket.writes==0 and actor.selectedAccessory.writes==0 and actor.otherParent.writes==0,'unrelated sockets, other parents and the selected model wheel accessories are untouched')
+        check(actor.foreignAccessory.writes==0 and actor.foreignBody.writes==0,'matching assets or sockets cannot bypass exact actor ownership')
+        check(actor.steeringAccessory.writes==0 and actor.humanoidAccessory.writes==0,'steering and humanoid meshes cannot be hidden by generic wheel-socket matching')
+        check(actor.Mesh.SkeletalMesh==f.selectedBody and actor.VehicleMovement.WheelSetups[1].BoneName:ToString()=='HatchWheel1' and f.defaultsRestored(),'selected body and physics rig remain intact with native defaults restored')
+    end)
+end)
+case('generic wheel maintenance forgets changed assets and attachment identities',function()
+    runFixture(function(f)
+        f.identityWheels=true
+        local actor=f.spawn(Profile.new(f.sourceClass,f.playerClass))
+        actor.genericWheel.bVisible=true;actor.genericWheel.bHiddenInGame=false;actor.genericWheel.collision=3
+        Profile.maintainDoors()
+        check(not actor.genericWheel.bVisible and actor.genericWheel.bHiddenInGame and actor.genericWheel.collision==0,'identity-based wheel hiding is maintained when native logic reveals it')
+        actor.genericWheel.socket='HatchWheel1';actor.genericWheel.bVisible=true;actor.genericWheel.bHiddenInGame=false
+        actor.oldBody.SkeletalMesh=f.selectedBody;actor.oldBody.bVisible=true;actor.oldBody.bHiddenInGame=false
+        Profile.maintainDoors()
+        check(actor.genericWheel.bVisible and not actor.genericWheel.bHiddenInGame,'a new attachment socket drops the old cosmetic ownership record')
+        check(actor.oldBody.bVisible and not actor.oldBody.bHiddenInGame,'replacing the old stock body asset drops the old hiding record')
+        actor.poseableBody.GetOwner=function()return f.pawn end;actor.poseableBody.bVisible=true;actor.poseableBody.bHiddenInGame=false
+        Profile.maintainDoors()
+        check(actor.poseableBody.bVisible and not actor.poseableBody.bHiddenInGame,'an owned poseable component is forgotten after reparenting to another actor')
+    end)
+end)
+case('owned poseable meshes are found by the skinned-component fallback',function()
+    runFixture(function(f)
+        f.identityWheels=true;f.failComponentQuery=true;f.strictComponentKinds=true
+        local profile=Profile.new(f.sourceClass,f.playerClass);local actor=f.spawn(profile)
+        check(profile.hiddenWheelCount==3 and not profile.doorWarning and not actor.poseableBody.bVisible,'failed native arrays still find owned poseable and generic socket components')
+        check(actor.foreignBody.writes==0 and actor.humanoidAccessory.writes==0,'broader fallback retains ownership and driver exclusions')
+        local count=0;for _,part in ipairs(Profile.ownedParts(actor))do if part==actor.poseableBody then count=count+1 end end
+        check(count==1,'base skinned and specific component searches deduplicate the same UObject')
     end)
 end)
 case('door hiding can enumerate owned components when native array marshaling fails',function()

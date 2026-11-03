@@ -11,6 +11,13 @@ PASS: failed restoration stays recoverable and cannot stack a second activation
 PASS: external engine ownership changes stop flight
 PASS: new vehicle keys are queued and failed diagnostics cannot drop active flight
 PASS: F5 restores normal walking before vehicle capture without returning to flight start
+PASS: F fallback queues only close-car entry and managed exit without engine reads in callbacks
+PASS: F fallback does not reverse successful native entry or immediately reenter after native exit
+PASS: F fallback restores noclip before entry and refuses a failed restoration
+PASS: F beside unrelated interactions leaves noclip active when no trainer car qualifies
+PASS: F fallback is suppressed in the menu and cached entry is discarded on player restart
+PASS: F input grace never transfers a pending entry to another target or player identity
+PASS: F input grace uses monotonic game time and cannot capture externally disabled movement
 PASS: bulk diagnostics are logged without forwarding property lines to HUD notices
 PASS: cold startup never registers engine-wide component or steering hooks
 PASS: native pre-damage guard suppresses protected-player damage before health processing
@@ -36,6 +43,9 @@ PASS: vehicle boost starts off, supports normal driving and returns to off clean
 PASS: trainer driving validates entry, rolls back failure and restores on exit
 PASS: converted-car maintenance enables native input correction only for its controlled car
 PASS: entry targets tracked cars throughout the spawn search radius without capturing distant traffic
+PASS: nearby F fallback uses body bounds and facing only for tracked converted cars
+PASS: F fallback shares possession rollback and leaves completed native interactions alone
+PASS: vehicle catalog refresh preserves the selected path and survives discovery failure
 PASS: native vehicle adapter uses native spawn helper, health guard and reversible possession
 PASS: native text menu does not depend on a Blueprint canvas event
 PASS: native menu keyboard edges dispatch actions after restoring input
@@ -50,6 +60,10 @@ PASS: authored source scale is installed before construction without late physic
 PASS: converted models hide only the extra door components and keep them hidden after entry
 PASS: converted bodies hide separate Abel wheels while preserving the selected rig and interior
 PASS: owned wheel hiding survives component-array marshaling failures
+PASS: an unreadable component owner cannot block remaining valid wheel cosmetics
+PASS: generic native accessories use exact original body or wheel attachment identities
+PASS: generic wheel maintenance forgets changed assets and attachment identities
+PASS: owned poseable meshes are found by the skinned-component fallback
 PASS: door hiding can enumerate owned components when native array marshaling fails
 PASS: component array decoding failures also use the owned-object fallback
 PASS: cosmetic door API failure does not discard a validated selected car
@@ -66,4 +80,9 @@ PASS: driver fallback recognizes actual Mixamo names while preserving hierarchy 
 PASS: driver fallback rejects vehicle geometry, other actors and unsafe skeletons
 PASS: driver maintenance stops before touching replaced or recycled components
 PASS: driver fallback reports missing APIs, refused writes and bounded errors
-RESULT: 434 assertions; 0 failures.
+PASS: vehicle catalog import never probes a loading world
+PASS: loaded supported vehicle classes are discovered with deterministic names and paths
+PASS: catalog refuses parent unrelated stale and unsupported models without edits
+PASS: live construction assets and class-scan failure do not hide available models
+PASS: duplicate model labels are distinguished and merges preserve existing selection
+RESULT: 525 assertions; 0 failures.

@@ -35,7 +35,6 @@ function Menu:rows()
         {label='Return to flight start',value='F10',action='return'},
         {label='Vehicle model',value='<  '..s.model..'  >',action='cycleVehicle',left='previousVehicle',right='cycleVehicle',stay=true},
         {label='Vehicle boost',value=(s.boost or 0)>0 and ('<  '..s.boost..' km/h  >') or '<  OFF  >',action='boostFaster',left='boostSlower',right='boostFaster',stay=true},
-        {label='Keyboard steering fix',value=s.steering and 'ON' or 'OFF',action='steering',stay=true},
         {label='Spawn selected vehicle',value=string.format('%d spawned   F9',s.spawned or 0),action='spawnVehicle'},
         {label=s.driving and 'Exit trainer driving' or 'Enter nearest trainer car',value='F5',action='drive'},
         {label='Recover / repair vehicle',value='F1',action='repair'},
@@ -52,7 +51,7 @@ function Menu:activate(row,direction)
     self.request(action)
 end
 function Menu:contents()
-    local lines={'LOST BUDAPEST TRAINER 0.4.6','F2 / Backspace: close | Arrows: select / adjust | Enter: activate',''}
+    local lines={'LOST BUDAPEST TRAINER 0.4.7','F2 / Backspace: close | Arrows: select / adjust | Enter: activate',''}
     for i,row in ipairs(self:rows())do lines[#lines+1]=(i==self.selected and '> ' or '  ')..row.label..'  ['..row.value..']'end
     lines[#lines+1]='';lines[#lines+1]='F3: next car | F9: spawn selected'
     for i=1,3 do lines[#lines+1]=self.message:sub((i-1)*70+1,i*70)end
