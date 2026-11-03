@@ -1,7 +1,9 @@
-## 0.4.5 — invisible menu font fix
+## 0.4.6 — vehicle cosmetics and easier entry
 
-- Supply a real font object to the native HUD text call. The bundled SDK leaves a nil font argument unconsumed, causing the following font scale to become zero.
-- Reuse an available engine font, with standard font-asset fallbacks.
-- Log the requested and native text scale where the HUD queue can be inspected, and reject a verified zero-scale submission before locking controls.
+- Hide the extra original Ábel wheel meshes on replacement vehicles while retaining the selected model's wheel rig and interior steering wheel.
+- Vary supported body paint per spawn using private materials and loaded traffic schemes. Unrecognized paint parameters retain their source colors.
+- Hide the recognized hatchback driver's head bone so it cannot protrude through the roof; the body and hands remain visible. Unknown skeletons are left unchanged.
+- F5 restores walking movement at your current location before entering, including when noclip is on. Use F5 beside a spawned car if the game's F prompt is unavailable.
+- Keep detailed diagnostic property/function lines in UE4SS.log and show one result message on screen.
 
-Fully quit the game and run **Update.cmd**, then load the level and press **F2** once. **Arrows** select/adjust and **Enter** activates. Other trainer features retain their v0.4.4 behavior.
+Fully quit the game and run **Update.cmd**. Spawn a new vehicle to use the updated cosmetics. **F2** opens the menu, **F3** cycles models, **F9** spawns and **F5** enters/exits a nearby trainer car.

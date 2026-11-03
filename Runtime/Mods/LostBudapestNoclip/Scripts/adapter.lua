@@ -36,7 +36,7 @@ local function down(controller, name)
 end
 
 function Adapter.log(message)
-    print("[Lost Budapest Trainer 0.4.5] " .. message .. "\n")
+    print("[Lost Budapest Trainer 0.4.6] " .. message .. "\n")
     if Adapter.onLog then pcall(Adapter.onLog,message) end
 end
 

@@ -95,10 +95,27 @@ LoopAsync(16, function()
                     if action=="toggle" or action=="return" or action=="drive" or action=="repair" or action=="spawnVehicle" or action=="diagnose" then menu:close() end
                     if action=="menu" then menu:toggle()
                     elseif action == "diagnose" then
+                        -- Detailed reflection output belongs in the log. Keep
+                        -- hundreds of property lines out of the HUD notice.
+                        local notice=adapter.onLog
+                        adapter.onLog=nil
                         local diagnosticOk,diagnosticError=xpcall(function() adapter.diagnose();require("vehicle_engine").diagnose() end,function(e)return debug.traceback(tostring(e),2)end)
-                        if not diagnosticOk then adapter.log("Vehicle diagnostic incomplete: "..tostring(diagnosticError)) end
+                        adapter.onLog=notice
+                        if diagnosticOk then adapter.log("Vehicle diagnostic saved to UE4SS.log.")
+                        else
+                            adapter.onLog=nil
+                            adapter.log("Vehicle diagnostic incomplete: "..tostring(diagnosticError))
+                            adapter.onLog=notice
+                            adapter.log("Vehicle diagnostic incomplete; details are in UE4SS.log.")
+                        end
                     elseif action == "drive" then
-                        if controller:isEnabled() then adapter.log("Turn noclip off before entering trainer driving.") else vehicles:drive() end
+                        -- Restore walking state at the current location before
+                        -- vehicle capture. A failed restore keeps its snapshot
+                        -- even when isEnabled() is false, so honor the result.
+                        local restored=true
+                        if controller:isEnabled() or controller.snapshot then restored=controller:disable(false) end
+                        if restored then vehicles:drive()
+                        else adapter.log("Vehicle entry paused until player movement is restored. Press F5 to retry.") end
                     elseif action == "repair" then vehicles:repair()
                     elseif action == "cycleVehicle" then vehicles:cycle()
                     elseif action == "previousVehicle" then vehicles:cycle(-1)

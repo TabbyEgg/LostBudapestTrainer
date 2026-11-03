@@ -1,4 +1,4 @@
-# Lost Budapest Trainer 0.4.5
+# Lost Budapest Trainer 0.4.6
 
 [**Download the latest ZIP from Releases**](https://github.com/TabbyEgg/LostBudapestTrainer/releases/latest)
 
@@ -106,8 +106,20 @@ and van selections use Abel's player-vehicle Blueprint with the selected model's
 body, animation, physics asset and wheel rig. This gives compatible models the
 same player controls, speedometer, radio and camera setup as Abel's car.
 
-Converted models hide the separate original Ábel door meshes and their collision,
-while retaining query collision for interaction. Component lookup can fall back
+Converted models hide the separate original Ábel door and wheel meshes. Doors
+retain query collision for interaction; hidden cosmetic wheels have no collision.
+The selected model's own wheel rig and the interior steering wheel are retained.
+The hatchback also hides the recognized driver's head bone to prevent it protruding
+through the roof, while keeping the body and hands. This is a cosmetic adjustment;
+it does not move the seat. Unrecognized driver skeletons are left unchanged.
+
+Spawned replacement models use varied loaded traffic paint schemes and random
+period-style body colors where a supported paint parameter is available. Each
+spawn gets its own dynamic paint material, so repainting a new car cannot repaint
+existing traffic or earlier spawns. Unrecognized paint parameters retain their
+source colors. Body paint changes leave captured glass, trim and roof colors unchanged.
+
+Component lookup can fall back
 to the SDK object list if the component-array call is unavailable. Doors that are part
 of the selected body stay with that body. **Keyboard steering fix** defaults on for
 these converted cars, including normal game entry with F. It updates the native A/D axis mappings used by the car, while leaving gamepad
@@ -117,12 +129,13 @@ or set `InvertVehicleSteering = false` in `config.lua` to retain original inputs
 
 This applies to new trainer spawns. Existing map traffic and the original Abel
 car are left alone. Stand on foot within **25 metres** and press **F5** to enter or
-exit a spawned car. Turn noclip off before entry.
+exit a spawned car. F5 switches noclip off at your current location before entry.
+Use F5 if the game's F interaction prompt is unavailable on a replacement body.
 
 A model must have a loaded animated body, matching wheel count, valid wheel
 bones and finite positive mesh scale. Authored scale is applied before vehicle
 physics is created; zero or mirrored scale is refused. An incompatible rig, or one replaced during game
-construction, cancels the spawn with a log message. A cosmetic door-hiding failure does not reject an otherwise valid matched
+construction, cancels the spawn with a log message. A cosmetic hiding or paint failure does not reject an otherwise valid matched
 vehicle; it is reported separately. The trainer never silently substitutes the
 AI driving setup when player setup is selected.
 
@@ -147,7 +160,8 @@ Speeds and bindings can be edited in
 
 Trainer messages are in `Eltunt_Budapest3\Binaries\Win64\UE4SS.log`.
 Home includes nearby vehicle repair/entry function names and relevant property
-names. Send that log if repair or entry is unsupported.
+names. Detailed diagnostics stay in the log; the HUD shows a short completion
+message. Send that log if repair or entry is unsupported.
 
 All engine access is through reflected functions on the game thread. Game EXE
 and save files are not modified. Use a full game restart after changing scripts;

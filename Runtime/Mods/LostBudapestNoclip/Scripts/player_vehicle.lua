@@ -1,6 +1,8 @@
 -- Build a selected body on Abel's native player vehicle before physics creation.
 -- Read source templates only. Restore every temporary player-template edit.
 local Profile={};Profile.__index=Profile
+local Paint=require('paint')
+local Driver=require('driver')
 local hiddenDoors={}
 local convertedCars={}
 local function valid(v)return v~=nil and v:IsValid()end
@@ -50,29 +52,28 @@ local function readSource(source)
     local wheels=wheelData(movement,mesh)
     local count=mesh:GetNumMaterials()
     assert(count>=0 and count<=32,'Unsupported vehicle material count')
-    local materials={}
+    local materials,paint={},{}
     for i=0,count-1 do
-        local material=mesh:GetMaterial(i)
-        -- Never share a traffic actor's mutable paint material with a new player car.
-        for depth=1,8 do
-            if not valid(material) or material:GetClass():GetFullName()~='Class /Script/Engine.MaterialInstanceDynamic' then break end
-            local ok,parent=pcall(function()return material.Parent end)
-            if not ok or not valid(parent) or objectName(parent)==objectName(material) or depth==8 then material=nil;break end
-            material=parent
-        end
-        materials[i]=material
+        materials[i],paint[i]=Paint.capture(mesh:GetMaterial(i))
     end
-    return {mesh=mesh,body=body,animation=animation,scale=scale,wheels=wheels,materials=materials,materialCount=count}
+    return {mesh=mesh,body=body,animation=animation,scale=scale,wheels=wheels,materials=materials,paint=paint,materialCount=count}
 end
 local function selectSource(class)
     -- Prefer a real traffic instance: ConstructionScript may choose the final
     -- body/animation/rig. Read its assets without changing its AI or state.
     local className=class:GetFullName()
+    local candidates={}
     for _,actor in ipairs(FindAllOf('WheeledVehicle') or {})do
         if valid(actor) and actor:GetClass():GetFullName()==className then
-            local usable,profile=pcall(readSource,actor)
-            if usable then return profile end
+            candidates[#candidates+1]=actor
         end
+    end
+    -- Start with a random traffic instance to retain the game's varied
+    -- material schemes, including colours with model-specific parameter names.
+    local start=#candidates>0 and math.random(#candidates) or 1
+    for offset=0,#candidates-1 do
+        local usable,profile=pcall(readSource,candidates[(start+offset-1)%#candidates+1])
+        if usable then return profile end
     end
     local ok,data=pcall(readSource,class:GetCDO())
     if ok then return data end
@@ -93,7 +94,8 @@ function Profile.new(sourceClass,playerClass)
     local playerWheels=wheelData(nativeMovement,target,false)
     assert(#sourceWheels==#playerWheels,'This model has an incompatible player wheel count')
     local materialCount,materials=selected.materialCount,selected.materials
-    local self=setmetatable({body=body,animation=animation,physics=mesh.PhysicsAssetOverride,scale=selected.scale,wheels=sourceWheels,materials=materials,materialCount=materialCount,changes={}},Profile)
+    local self=setmetatable({body=body,animation=animation,physics=mesh.PhysicsAssetOverride,scale=selected.scale,wheels=sourceWheels,materials=materials,paint=selected.paint,materialCount=materialCount,changes={}},Profile)
+    self.hideDriverHead=sourceClass:GetFullName():find('/Cars/Hatch/',1,true)~=nil
     local function change(object,key,value)
         self.changes[#self.changes+1]={object=object,key=key,old=object[key],value=value}
     end
@@ -132,10 +134,32 @@ function Profile:restore()
     end
     if #errors>0 then error(table.concat(errors,'; '),0)end
 end
-local function doorName(object)
+local function partName(object)
     local name=(objectName(object) or ''):match('[^%.:/ ]+$') or ''
-    name=name:lower()
+    return name:lower()
+end
+local function doorName(name)
     return (name:find('door',1,true) and not name:find('outdoor',1,true)) or name:find('ajt',1,true)
+end
+local function steeringName(name)
+    for _,word in ipairs({'steer','volan','volán','kormany','kormány'})do if name:find(word,1,true)then return true end end
+    return false
+end
+local function wheelName(name)
+    for _,word in ipairs({'wheel','tire','tyre','hubcap','kerek','kerék','felni','gumi','abroncs'})do if name:find(word,1,true)then return true end end
+    return name:match('^rim') or name:match('[^%a]rim')
+end
+local function cosmeticKind(part)
+    local names={partName(part)}
+    for _,field in ipairs({'StaticMesh','SkeletalMesh'})do
+        local ok,asset=pcall(function()return part[field]end)
+        if ok and valid(asset)then names[#names+1]=partName(asset)end
+    end
+    -- An interior steering wheel can use a generic wheel asset. Check all
+    -- names for this exclusion before classifying any separate mesh as a tyre.
+    for _,name in ipairs(names)do if steeringName(name)then return nil end end
+    for _,name in ipairs(names)do if doorName(name)then return 'door' end end
+    for _,name in ipairs(names)do if wheelName(name)then return 'wheel' end end
 end
 local function unwrap(value)
     local ok,result=pcall(function()return value:get()end)
@@ -172,31 +196,31 @@ function Profile:hideExtraDoors(actor)
             end
         end
     end
-    self.hiddenDoorCount=0
+    self.hiddenDoorCount,self.hiddenWheelCount,self.hiddenHeadCount=0,0,0
     for _,entry in ipairs(entries)do
         local part=unwrap(entry)
         if valid(part) and objectName(part)~=objectName(actor.Mesh) and objectName(part:GetOwner())==objectName(actor) then
-            local hide=doorName(part)
-            for _,field in ipairs({'StaticMesh','SkeletalMesh'})do
-                if not hide then
-                    local ok,matched=pcall(function()local asset=part[field];return valid(asset) and doorName(asset)end)
-                    if ok then hide=matched end
-                end
+            if self.hideDriverHead then
+                local hidden=Driver.hideHead(actor,part)
+                if hidden then self.hiddenHeadCount=self.hiddenHeadCount+1 end
             end
-            if hide then
+            local kind=cosmeticKind(part)
+            if kind then
                 local oldCollision=part:GetCollisionEnabled()
-                local queryCollision=(oldCollision==1 or oldCollision==3) and 1 or 0
+                local queryCollision=kind=='door' and (oldCollision==1 or oldCollision==3) and 1 or 0
                 hiddenDoors[part:GetAddress()]={part=part,actor=actor,name=objectName(part),owner=objectName(actor),collision=queryCollision}
                 part:SetVisibility(false,true)
                 part:SetHiddenInGame(true,true)
                 part:SetCollisionEnabled(queryCollision)
-                self.hiddenDoorCount=self.hiddenDoorCount+1
+                if kind=='door' then self.hiddenDoorCount=self.hiddenDoorCount+1
+                else self.hiddenWheelCount=self.hiddenWheelCount+1 end
             end
         end
     end
 end
-function Profile.hasWork()return next(convertedCars)~=nil or next(hiddenDoors)~=nil end
+function Profile.hasWork()return next(convertedCars)~=nil or next(hiddenDoors)~=nil or Driver.hasWork() end
 function Profile.maintainDoors(log)
+    Driver.maintain(log)
     -- Called only from the queued game-thread update. Never intercept native
     -- setters shared by the level loader, world props or other actors.
     for key,record in pairs(hiddenDoors)do
@@ -209,7 +233,7 @@ function Profile.maintainDoors(log)
             if part.bHiddenInGame~=true then part:SetHiddenInGame(true,true)end
             if part:GetCollisionEnabled()~=record.collision then part:SetCollisionEnabled(record.collision)end
         end)
-        if not ok then hiddenDoors[key]=nil;if log then log('Door maintenance stopped for a changed component: '..tostring(err))end end
+        if not ok then hiddenDoors[key]=nil;if log then log('Cosmetic component maintenance stopped for a changed component: '..tostring(err))end end
     end
     for key,record in pairs(convertedCars)do
         if not valid(record.actor) or objectName(record.actor)~=record.name then convertedCars[key]=nil end
@@ -253,7 +277,13 @@ function Profile:validate(actor)
     local oldCount=mesh:GetNumMaterials()
     assert(oldCount>=0 and oldCount<=32,'Unsupported spawned material count')
     for i=0,math.max(oldCount,self.materialCount)-1 do mesh:SetMaterial(i,self.materials[i])end
-    -- Door visibility is cosmetic. A missing door component API must not
+    local paintOk,paint=pcall(Paint.apply,mesh,self.paint)
+    if not paintOk then self.paintWarning=tostring(paint)
+    else
+        self.randomizedPaintSlots=paint.randomizedSlots
+        if #paint.issues>0 then self.paintWarning=table.concat(paint.issues,'; ')end
+    end
+    -- Extra doors/wheels are cosmetic. A missing component API must not
     -- discard an otherwise valid native vehicle with a matched physics rig.
     local doorOk,doorError=pcall(self.hideExtraDoors,self,actor)
     if not doorOk then self.doorWarning=tostring(doorError)end

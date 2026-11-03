@@ -5,7 +5,7 @@
   "failures": 0,
   "checks": [
     {
-      "name": "fresh installation completes: Lost Budapest Noclip installed/updated. Start the game normally; F6 toggles noclip.\nReceipt and original-file backups are in: /workspace/lost-budapest-research/lbn-install-tests-k12xwkd7/fresh/game/Eltunt_Budapest3/Binaries/Win64\n",
+      "name": "fresh installation completes: Lost Budapest Noclip installed/updated. Start the game normally; F6 toggles noclip.\nReceipt and original-file backups are in: /workspace/lost-budapest-research/lbn-install-tests-d1a6lpfn/fresh/game/Eltunt_Budapest3/Binaries/Win64\n",
       "pass": true
     },
     {
@@ -21,7 +21,7 @@
       "pass": true
     },
     {
-      "name": "fresh receipt lists all fifteen payloads plus merged mod list",
+      "name": "fresh receipt lists all seventeen payloads plus merged mod list",
       "pass": true
     },
     {
@@ -37,7 +37,7 @@
       "pass": true
     },
     {
-      "name": "Win64 direct install with existing loader/config completes: Lost Budapest Noclip installed/updated. Start the game normally; F6 toggles noclip.\nReceipt and original-file backups are in: /workspace/lost-budapest-research/lbn-install-tests-k12xwkd7/existing/game/Eltunt_Budapest3/Binaries/Win64\n",
+      "name": "Win64 direct install with existing loader/config completes: Lost Budapest Noclip installed/updated. Start the game normally; F6 toggles noclip.\nReceipt and original-file backups are in: /workspace/lost-budapest-research/lbn-install-tests-d1a6lpfn/existing/game/Eltunt_Budapest3/Binaries/Win64\n",
       "pass": true
     },
     {

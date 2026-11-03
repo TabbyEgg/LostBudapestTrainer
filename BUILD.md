@@ -1,6 +1,6 @@
 # Source and validation
 
-The trainer source is the twelve Lua files under
+The trainer source is the fourteen Lua files under
 `Runtime/Mods/LostBudapestNoclip/Scripts/`. There is no compiled trainer logic.
 The only DLLs are unmodified files from official UE4SS 3.0.1, listed with hashes
 in `payload-manifest.json` and attributed in `THIRD-PARTY.md`.
@@ -25,7 +25,8 @@ Run `python tools/package.py` to verify the recorded source identities and
 dependency bytes, regenerate the payload manifest and create the release ZIP.
 The game EXE and research toolchains are excluded from releases.
 
-Current results: **366 Lua assertions and 61 installer assertions pass**.
+Current results: **434 Lua assertions and 61 installer assertions pass**, recorded
+in `tests/results.json` and `validation/installer-check-results.json`.
 The actual runtime payload was also installed and removed in an isolated
 filesystem fixture, leaving the original game EXE unchanged. The loader proxy
 exports every DWM function imported by the supplied game EXE.
@@ -116,3 +117,32 @@ invalid-font reacquisition, missing-font cleanup and the exact defective tail
 marshaling are modeled. Optional native DebugTextList inspection records the
 actual scale and rejects a readable zero scale; metadata-read failures are
 nonfatal. These checks do not observe pixels in the Windows game.
+
+The user's supplied 0.4.5 menu screenshot confirms that the native HUD text is
+visible in their game, including the feature rows and live speed/model values.
+
+0.4.6 copies observed material vector overrides into a detached Lua snapshot,
+then creates private dynamic materials on each converted car. It accepts only
+global parameters (`EMaterialParameterAssociation::GlobalParameter = 2`) and
+randomizes recognized body-paint values with one coherent period colour per
+car. Glass, chrome, tyre, interior, roof and opacity values are preserved. A
+random matching live traffic instance supplies existing schemes; source traffic
+materials and immutable parents are never written. Missing metadata retains the
+available source appearance, and a cosmetic failure does not discard a valid car.
+Only vector overrides are cloned from source dynamic materials; scalar/texture
+overrides continue to use the immutable parent's values.
+
+Separate original wheel mesh components are hidden only when owned by the
+converted native car. The selected root mesh, its wheel bones and physics-wheel
+data are excluded, as are steering-wheel meshes. The same queued ownership and
+identity checks maintain extra-door and wheel visibility without engine-wide
+hooks. The hatchback driver adjustment hides a validated humanoid head bone on a
+secondary owned mesh, retaining torso, hands and animation. No verified model-specific
+seat anchors are available, so it avoids guessed seat transforms.
+
+F5 restores the previous walking movement and collision state at the current
+flight location before vehicle capture. Entry stops if that restoration fails,
+including after automatic retry exhaustion, and F5 can retry the retained
+snapshot. Native F interaction geometry remains model dependent. Diagnostic
+reflection output now stays in `UE4SS.log`; the HUD receives a single completion
+or failure summary, and failures restore the notice callback.

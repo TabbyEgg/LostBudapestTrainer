@@ -10,6 +10,8 @@ PASS: failed emergency return keeps noclip active until a successful retry
 PASS: failed restoration stays recoverable and cannot stack a second activation
 PASS: external engine ownership changes stop flight
 PASS: new vehicle keys are queued and failed diagnostics cannot drop active flight
+PASS: F5 restores normal walking before vehicle capture without returning to flight start
+PASS: bulk diagnostics are logged without forwarding property lines to HUD notices
 PASS: cold startup never registers engine-wide component or steering hooks
 PASS: native pre-damage guard suppresses protected-player damage before health processing
 PASS: F2 opens the native HUD menu without script drawing callbacks
@@ -46,10 +48,22 @@ PASS: selected bodies are constructed on Abel player Blueprint with matching ani
 PASS: incompatible source rigs are refused before template edits or native spawning
 PASS: authored source scale is installed before construction without late physics resizing
 PASS: converted models hide only the extra door components and keep them hidden after entry
+PASS: converted bodies hide separate Abel wheels while preserving the selected rig and interior
+PASS: owned wheel hiding survives component-array marshaling failures
 PASS: door hiding can enumerate owned components when native array marshaling fails
 PASS: component array decoding failures also use the owned-object fallback
 PASS: cosmetic door API failure does not discard a validated selected car
 PASS: partial template changes and failed construction always restore the native setup
 PASS: runtime source rigs can supply construction-only assets without sharing mutable paint
 PASS: vehicle model routing chooses the native player template and preserves explicit legacy mode
-RESULT: 366 assertions; 0 failures.
+PASS: traffic paint capture detaches values and respects outer overrides and native array bounds
+PASS: generic runtime MID paint names are resolved through their immutable parent
+PASS: spawned cars get independent coherent body paint while trim and alpha survive
+PASS: glass chrome tires and unknown vector names are preserved without guessed parameter writes
+PASS: missing paint metadata and native failures stay cosmetic and never write traffic materials
+PASS: converted-driver head hiding preserves the body, hands and native systems
+PASS: driver fallback recognizes actual Mixamo names while preserving hierarchy checks
+PASS: driver fallback rejects vehicle geometry, other actors and unsafe skeletons
+PASS: driver maintenance stops before touching replaced or recycled components
+PASS: driver fallback reports missing APIs, refused writes and bounded errors
+RESULT: 434 assertions; 0 failures.

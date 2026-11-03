@@ -21,7 +21,7 @@ def fixture(folder):
  folder.mkdir();pkg=folder/'package';pkg.mkdir();game=folder/'game';win=game/'Eltunt_Budapest3/Binaries/Win64';win.mkdir(parents=True);os.link(EXE,win/EXE.name)
  for name in ['install.ps1','uninstall.ps1']:shutil.copy2(ROOT/name,pkg/name)
  files={'UE4SS.dll':b'official-test-loader','dwmapi.dll':b'official-test-proxy','UE4SS-settings.ini':b'[General]\nEnableHotReloadSystem = 1\n[Debug]\nConsoleEnabled = 1\nGuiConsoleEnabled = 1\nGuiConsoleVisible = 1\n[EngineVersionOverride]\nMajorVersion = 0\nMinorVersion = 0\n'}
- for name in ['main.lua','controller.lua','adapter.lua','config.lua','protection.lua','vehicles.lua','vehicle_engine.lua','native_spawn.lua','menu.lua','menu_engine.lua','player_vehicle.lua','steering.lua']:files['Mods/LostBudapestNoclip/Scripts/'+name]=b'-- test '+name.encode()
+ for name in ['main.lua','controller.lua','adapter.lua','config.lua','protection.lua','vehicles.lua','vehicle_engine.lua','native_spawn.lua','menu.lua','menu_engine.lua','player_vehicle.lua','steering.lua','paint.lua','driver.lua']:files['Mods/LostBudapestNoclip/Scripts/'+name]=b'-- test '+name.encode()
  records=[]
  for rel,data in files.items():
   p=pkg/'Runtime'/rel;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(data);records.append({'path':rel,'size':len(data),'sha256':hashlib.sha256(data).hexdigest()})
@@ -32,7 +32,7 @@ with tempfile.TemporaryDirectory(prefix='lbn-install-tests-',dir=args.temp_root 
  check((win/'dwmapi.dll').read_bytes()==files['dwmapi.dll'],'fresh proxy bytes match approved payload')
  check((win/'Mods/mods.txt').read_text().strip()=='LostBudapestNoclip : 1','fresh mod entry enabled')
  ini=(win/'UE4SS-settings.ini').read_text();check('EnableHotReloadSystem = 0' in ini and 'MajorVersion = 4' in ini and 'MinorVersion = 27' in ini and 'ConsoleEnabled = 0' in ini,'fresh required INI settings applied')
- receipt=json.loads((win/'LostBudapestNoclip.install.json').read_text());check(len(receipt['files'])==16,'fresh receipt lists all fifteen payloads plus merged mod list')
+ receipt=json.loads((win/'LostBudapestNoclip.install.json').read_text());check(len(receipt['files'])==18,'fresh receipt lists all seventeen payloads plus merged mod list')
  r=run(pkg,game);check(r.returncode==1 and 'receipt already exists' in r.stdout,'second install refuses original backup chain overwrite')
  r=run(pkg,game,True);check(r.returncode==0,'fresh uninstall completes: '+r.stdout+r.stderr)
  check(not (win/'dwmapi.dll').exists() and not (win/'Mods').exists() and not (win/'LostBudapestNoclip.install.json').exists(),'fresh uninstall removes only newly installed content and receipt')
@@ -74,14 +74,14 @@ def prior_fixture(folder):
  pkg,game,win,files=fixture(folder)
  old=(ROOT/'tests/fixtures/install-0.1.3.ps1').read_bytes()
  (pkg/'install.ps1').write_bytes(old)
- for name in ['protection.lua','vehicles.lua','vehicle_engine.lua','native_spawn.lua','menu.lua','menu_engine.lua','player_vehicle.lua','steering.lua']:(pkg/'Runtime/Mods/LostBudapestNoclip/Scripts'/name).unlink()
+ for name in ['protection.lua','vehicles.lua','vehicle_engine.lua','native_spawn.lua','menu.lua','menu_engine.lua','player_vehicle.lua','steering.lua','paint.lua','driver.lua']:(pkg/'Runtime/Mods/LostBudapestNoclip/Scripts'/name).unlink()
  refresh_manifest(pkg)
  original=b'[General]\nEnableHotReloadSystem=1\nMySetting=71\n'
  (win/'UE4SS-settings.ini').write_bytes(original)
  check(run(pkg,game).returncode==0,'previous-version install creates a real legacy receipt')
  prior=(win/'LostBudapestNoclip.install.json').read_bytes()
  shutil.copyfile(ROOT/'install.ps1',pkg/'install.ps1')
- for name in ['protection.lua','vehicles.lua','vehicle_engine.lua','native_spawn.lua','menu.lua','menu_engine.lua','player_vehicle.lua','steering.lua']:(pkg/'Runtime/Mods/LostBudapestNoclip/Scripts'/name).write_bytes(b'-- new '+name.encode())
+ for name in ['protection.lua','vehicles.lua','vehicle_engine.lua','native_spawn.lua','menu.lua','menu_engine.lua','player_vehicle.lua','steering.lua','paint.lua','driver.lua']:(pkg/'Runtime/Mods/LostBudapestNoclip/Scripts'/name).write_bytes(b'-- new '+name.encode())
  (pkg/'Runtime/Mods/LostBudapestNoclip/Scripts/main.lua').write_bytes(b'-- updated main')
  refresh_manifest(pkg)
  return pkg,game,win,original,prior
@@ -92,7 +92,7 @@ with tempfile.TemporaryDirectory(prefix='lbn-update-tests-',dir=args.temp_root o
  new=json.loads((win/'LostBudapestNoclip.install.json').read_text());old=json.loads(prior)
  check(new['backupDirectory']==old['backupDirectory'],'Update retains original uninstall backup chain')
  check((win/'Mods/LostBudapestNoclip/Scripts/main.lua').read_bytes()==b'-- updated main','Update replaces old trainer code')
- check(all((win/'Mods/LostBudapestNoclip/Scripts'/n).exists() for n in ['protection.lua','vehicles.lua','vehicle_engine.lua','native_spawn.lua','menu.lua','menu_engine.lua','player_vehicle.lua','steering.lua']),'Update adds new modules')
+ check(all((win/'Mods/LostBudapestNoclip/Scripts'/n).exists() for n in ['protection.lua','vehicles.lua','vehicle_engine.lua','native_spawn.lua','menu.lua','menu_engine.lua','player_vehicle.lua','steering.lua','paint.lua','driver.lua']),'Update adds new modules')
  check(run(pkg,game,update=True).returncode==0,'same-version Update is idempotent')
  check(run(pkg,game,True).returncode==0 and (win/'UE4SS-settings.ini').read_bytes()==original,'uninstall after Update restores pre-first-install settings')
  check(not (win/'LostBudapestNoclip.install.json').exists() and not (win/'Mods').exists(),'uninstall after Update removes new and old owned trainer files')

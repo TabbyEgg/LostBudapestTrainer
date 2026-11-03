@@ -276,6 +276,7 @@ local function engine()
     function f.movement:StopMovementImmediately()guard('StopMovementImmediately')end
     function f.movement:SetMovementMode(mode,custom)
         guard('SetMovementMode')
+        if f.failMovementRestore and mode==1 then error('injected movement restoration failure')end
         assert(type(mode)=='number' and mode%1==0 and mode>=0 and mode<=6,'movement mode must be uint8 enum')
         assert(type(custom)=='number' and custom%1==0 and custom>=0 and custom<=255,'custom movement mode argument is required')
         self.MovementMode,self.CustomMovementMode=mode,custom
@@ -342,12 +343,52 @@ case('new vehicle keys are queued and failed diagnostics cannot drop active flig
     check(f.registry[Key.HOME] and f.registry[Key.F4],'Home diagnostic and god-mode keys registered')
     check(f.registry[Key.F2] and f.registry[Key.F3] and not f.registry[Key.INS],'F2 menu and F3 selection replace the old Insert binding')
     f.press('F6');f.step(0)
-    f.press('F5');f.step(0.01);check(not f.pawn.collision,'driving request cannot capture an active noclip pawn')
-    f.press('HOME');f.step(0.01);check(not f.pawn.collision,'diagnostic read failure leaves flight active')
-    f.press('F3');f.step(0.01);check(not f.pawn.collision,'vehicle selection does not mutate player physics')
+    f.press('HOME');f.step(0.01);check(not f.collision and f.movement.MovementMode==0,'diagnostic read failure leaves flight active')
+    f.press('F3');f.step(0.01);check(not f.collision and f.movement.MovementMode==0,'vehicle selection does not mutate player physics')
     f.pawn.bCanBeDamaged=true;f.press('F4');f.step(0.01);check(f.pawn.bCanBeDamaged==false,'god mode key disables the actual player damage property')
     f.inGame=true;f.restart();f.inGame=false;f.step(0.01);check(f.pawn.bCanBeDamaged==false,'manual god mode remains requested across player restarts and vehicle possession')
     f.finish()
+end)
+
+case('F5 restores normal walking before vehicle capture without returning to flight start',function()
+    local previous=package.loaded.vehicles
+    for _,fail in ipairs({false,true})do
+        local f=engine()
+        local driving={catalog={{name='Test'}},selected=1,boostSpeeds={0},boostIndex=1,count=function()return 0 end,hasWork=function()return false end,tick=function()end}
+        function driving:drive()
+            f.driveCalls=(f.driveCalls or 0)+1
+            f.capturedNormal=f.collision and f.movement.MovementMode==1
+            f.capturePosition=copy(f.position)
+        end
+        package.loaded.vehicles={new=function()return driving end}
+        f.load();f.press('F6');f.step(0)
+        f.position={X=900,Y=400,Z=35};f.failMovementRestore=fail
+        f.press('F5');f.step(.01)
+        if fail then
+            check(not f.driveCalls,'failed noclip restoration cannot capture or possess a car')
+            f.step(.01);f.step(.01);f.step(.01) -- bounded automatic retries expire
+            f.failMovementRestore=false;f.press('F5');f.step(.01)
+            check(f.driveCalls==1 and f.capturedNormal,'F5 retries a pending snapshot even after flight and automatic retries stop')
+        else check(f.driveCalls==1 and f.capturedNormal,'vehicle capture sees restored walking mode and collision')end
+        check(samePosition(f.capturePosition,{X=900,Y=400,Z=35}),'entry uses the current flight destination rather than teleporting to its start')
+        f.finish()
+    end
+    package.loaded.vehicles=previous
+end)
+
+case('bulk diagnostics are logged without forwarding property lines to HUD notices',function()
+    local f=engine();f.load()
+    local adapter=require('adapter');local engineApi=require('vehicle_engine')
+    local oldAdapter,oldEngine=adapter.diagnose,engineApi.diagnose
+    local notices={};adapter.onLog=function(message)notices[#notices+1]=message end
+    adapter.diagnose=function()adapter.log('PROPERTY sample=object/unavailable')end
+    engineApi.diagnose=function()adapter.log('FUNCTION example');error('injected detail failure')end
+    f.press('HOME');f.step(0)
+    check(#notices==1 and notices[1]=='Vehicle diagnostic incomplete; details are in UE4SS.log.','failed diagnostics restore the notice callback and show only a short result')
+    engineApi.diagnose=function()adapter.log('PROPERTY another=value')end
+    notices={};f.press('HOME');f.step(.01)
+    check(#notices==1 and notices[1]=='Vehicle diagnostic saved to UE4SS.log.','successful diagnostics show one summary without reflection details')
+    adapter.diagnose,engineApi.diagnose=oldAdapter,oldEngine;f.finish()
 end)
 
 case('cold startup never registers engine-wide component or steering hooks',function()
@@ -589,5 +630,7 @@ dofile(TRAINER_ROOT..'/tests/vehicle_regressions.lua')(check,case)
 dofile(TRAINER_ROOT..'/tests/menu_regressions.lua')(check,case)
 dofile(TRAINER_ROOT..'/tests/spawn_regressions.lua')(check,case)
 dofile(TRAINER_ROOT..'/tests/player_vehicle_regressions.lua')(check,case)
+dofile(TRAINER_ROOT..'/tests/paint_regressions.lua')(check,case)
+dofile(TRAINER_ROOT..'/tests/driver_regressions.lua')(check,case)
 
 TEST_PRINT(string.format('RESULT: %d assertions; %d failures.',TEST_ASSERTIONS,TEST_FAILURES))

@@ -95,6 +95,28 @@ local function fixture()
             a.door=door;a.driver=driver
             a.components={a.Mesh,{get=function()return door end},{get=function()return driver end}}
         end
+        if f.extraWheels then
+            local function part(name,asset,owner)
+                local value=object('StaticMeshComponent /World.NewCar.'..name)
+                value.bVisible=true;value.bHiddenInGame=false;value.collision=3;value.writes=0
+                value.StaticMesh=asset and object('StaticMesh /Game/Abel.'..asset) or nil
+                function value:GetOwner()return owner or a end
+                function value:SetVisibility(v,propagate)assert(propagate);self.bVisible=v;self.writes=self.writes+1 end
+                function value:SetHiddenInGame(v,propagate)assert(propagate);self.bHiddenInGame=v;self.writes=self.writes+1 end
+                function value:SetCollisionEnabled(v)self.collision=v;self.writes=self.writes+1 end
+                function value:GetCollisionEnabled()return self.collision end
+                a.components[#a.components+1]={get=function()return value end}
+                return value
+            end
+            a.extraWheel=part('WheelFrontLeft','Wheel')
+            a.extraTire=part('AxleDetail','Tyre')
+            a.steeringWheel=part('SteeringWheel','Wheel')
+            a.dashboardWheel=part('DashboardPart','SteeringWheel')
+            a.trim=part('ChromeTrim','Trim')
+            a.foreignWheel=part('ForeignWheel','Wheel',f.pawn)
+            a.Mesh.name='SkeletalMeshComponent /World.NewCar.SelectedWheelBody'
+            function a.Mesh:SetVisibility()error('selected body must stay visible')end
+        end
         a.VehicleMovement=object('NewPlayerMovement')
         local entries={}
         for i=1,4 do
@@ -235,6 +257,36 @@ case('converted models hide only the extra door components and keep them hidden 
         actor.alive=false
         Profile.maintainDoors()
         check(not Profile.steeringTarget(actor) and not Profile.hasWork(),'destroyed converted cars are pruned and stop the maintenance pump')
+    end)
+end)
+case('converted bodies hide separate Abel wheels while preserving the selected rig and interior',function()
+    runFixture(function(f)
+        f.extraWheels=true;f.doors=true
+        local profile=Profile.new(f.sourceClass,f.playerClass);local actor=f.spawn(profile)
+        check(profile.hiddenWheelCount==2 and not actor.extraWheel.bVisible and actor.extraWheel.bHiddenInGame and actor.extraWheel.collision==0,'separate native wheel components are hidden without collision')
+        check(not actor.extraTire.bVisible and actor.extraTire.bHiddenInGame and actor.extraTire.collision==0,'a generic component is recognized by its tire mesh asset')
+        check(actor.steeringWheel.bVisible and actor.dashboardWheel.bVisible and actor.steeringWheel.writes==0 and actor.dashboardWheel.writes==0,'interior steering wheels are excluded using both component and asset names')
+        check(actor.trim.bVisible and actor.trim.writes==0 and actor.foreignWheel.writes==0,'trim and components owned by another actor are untouched')
+        local setups=actor.VehicleMovement.WheelSetups
+        check(actor.Mesh.SkeletalMesh==f.selectedBody and setups[1].WheelClass==f.selectedWheel and setups[1].BoneName:ToString()=='HatchWheel1' and setups[1].AdditionalOffset.Y==42,'selected root mesh and simulated wheel rig remain intact')
+        check(actor.driver.alive and actor.door.collision==1 and profile.hiddenDoorCount==1,'the driver and native entry-query collision are preserved alongside wheel hiding')
+        actor.extraWheel.bVisible=true;actor.extraWheel.bHiddenInGame=false;actor.extraWheel.collision=3
+        Profile.maintainDoors()
+        check(not actor.extraWheel.bVisible and actor.extraWheel.bHiddenInGame and actor.extraWheel.collision==0,'queued component maintenance re-hides a wheel revealed by native logic')
+        local writes=actor.extraWheel.writes;Profile.maintainDoors()
+        check(actor.extraWheel.writes==writes and actor.VehicleMovement.WheelSetups==setups,'maintenance avoids redundant writes and never replaces physics wheel setups')
+        actor.extraWheel.GetOwner=function()return f.pawn end
+        actor.extraWheel.bVisible=true;actor.extraWheel.bHiddenInGame=false;actor.extraWheel.collision=3
+        Profile.maintainDoors()
+        check(actor.extraWheel.bVisible and not actor.extraWheel.bHiddenInGame and actor.extraWheel.collision==3,'reparented wheel components are forgotten without touching their new owner')
+    end)
+end)
+case('owned wheel hiding survives component-array marshaling failures',function()
+    runFixture(function(f)
+        f.extraWheels=true;f.failComponentQuery=true
+        local profile=Profile.new(f.sourceClass,f.playerClass);local actor=f.spawn(profile)
+        check(profile.hiddenWheelCount==2 and not profile.doorWarning and not actor.extraWheel.bVisible and not actor.extraTire.bVisible,'stable object enumeration hides separate wheels when native component-array return fails')
+        check(actor.steeringWheel.bVisible and actor.dashboardWheel.bVisible and actor.foreignWheel.writes==0,'fallback keeps the same interior and ownership restrictions')
     end)
 end)
 case('door hiding can enumerate owned components when native array marshaling fails',function()

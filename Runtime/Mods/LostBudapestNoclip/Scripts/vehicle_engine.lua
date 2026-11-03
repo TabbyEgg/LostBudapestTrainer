@@ -53,7 +53,9 @@ function Engine.begin(ctx,class,transform)
         local player=assert(Engine.class("/Game/Autok/Abel_Car.Abel_Car_C"),"Abel player vehicle must be loaded for this model")
         local profile=require("player_vehicle").new(class,player)
         local actor=require("native_spawn").actor(ctx,player,transform,"WheeledVehicle",profile)
-        if profile.doorWarning then Engine.log("Selected car spawned; extra-door hiding unavailable: "..profile.doorWarning)end
+        if profile.doorWarning then Engine.log("Selected car spawned; extra door/wheel hiding unavailable: "..profile.doorWarning)end
+        if profile.paintWarning then Engine.log("Selected car spawned; paint variation limited: "..profile.paintWarning)end
+        Engine.log(string.format("Selected body cosmetics: %d extra doors, %d extra wheels hidden; %d driver heads hidden; %d paint slots randomized.",profile.hiddenDoorCount or 0,profile.hiddenWheelCount or 0,profile.hiddenHeadCount or 0,profile.randomizedPaintSlots or 0))
         Engine.maintenanceFailed=false
         return actor
     end
@@ -374,11 +376,28 @@ function Engine.diagnose()
         end
     end
     table.sort(items,function(a,b)return a.distance<b.distance end)
+    local partsOk,skeletalParts=pcall(FindAllOf,'SkeletalMeshComponent')
     for index=1,math.min(3,#items) do
         local actor=items[index].actor
         Engine.log("NEARBY VEHICLE "..actor:GetFullName())
         local bodyOk,body=pcall(function()return actor.Mesh.SkeletalMesh end)
         if bodyOk and Engine.valid(body) then Engine.log("BODY "..body:GetFullName())end
+        if partsOk then
+            local inspected=0
+            for _,part in ipairs(skeletalParts or {})do
+                if inspected>=12 then break end
+                pcall(function()
+                    if not Engine.valid(part) or not Engine.valid(part:GetOwner()) or part:GetOwner():GetFullName()~=actor:GetFullName()then return end
+                    inspected=inspected+1
+                    Engine.log('OWNED SKELETAL MESH '..part:GetFullName())
+                    local count=part:GetNumBones()
+                    if type(count)~='number' or count%1~=0 or count<0 or count>1024 then return end
+                    local bones={}
+                    for bone=0,math.min(count,256)-1 do bones[#bones+1]=part:GetBoneName(bone):ToString()end
+                    Engine.log('BONES '..table.concat(bones,', '))
+                end)
+            end
+        end
         local class=actor:GetClass()
         for _=1,6 do
             if not Engine.valid(class) then break end
