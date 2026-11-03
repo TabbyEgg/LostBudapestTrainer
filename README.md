@@ -7,6 +7,8 @@ Windows demo. Targets the supplied Unreal 4.27.2 build of
 `EltuntBP-Win64-Shipping.exe`, SHA256
 `2e5f4d5b66da873a488287b580c2ba3dd91ed892727cfd71ecbd610d6a08f284`.
 
+![Aerial view of Budapest and the Danube using noclip](https://raw.githubusercontent.com/TabbyEgg/LostBudapestTrainer/main/docs/images/budapest-noclip.png)
+
 ## Install and update
 
 Close the game, extract the ZIP into its own folder, and run **Install.cmd**.
@@ -38,6 +40,10 @@ its entry in `Mods\mods.txt`.
 To temporarily disable the trainer, set `LostBudapestNoclip : 0` in that file.
 
 ## Menu
+
+![Lost Budapest Trainer in-game menu](https://raw.githubusercontent.com/TabbyEgg/LostBudapestTrainer/main/docs/images/trainer-menu.png)
+
+*In-game menu (v0.4.5).*
 
 Press **F2** in a loaded level to open or close the keyboard menu.
 Use **Up/Down** to select, **Left/Right** to adjust a speed or model, **Enter**
